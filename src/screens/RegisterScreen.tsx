@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import { auth, db } from "../firebaseConfig";
+import React, { useState, useRef } from "react";
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithPhoneNumber 
+} from "firebase/auth";
+import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
+import { FirebaseApp } from "firebase/app";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { doc, setDoc } from "firebase/firestore";
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   Image,
   ScrollView,
   Modal,
@@ -43,6 +51,11 @@ const RegisterScreen: React.FC = () => {
   });
   const [selectedArea, setSelectedArea] = useState<string>('');
   const [showAreaModal, setShowAreaModal] = useState<boolean>(false);
+  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [otpCode, setOtpCode] = useState("");
+  const [showOtpModal, setShowOtpModal] = useState(false);
+
+  const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -56,8 +69,63 @@ const RegisterScreen: React.FC = () => {
     setShowAreaModal(false);
   };
 
-  const handleRegister = () => {
-    console.log('Register pressed', formData);
+  const saveUserData = async (uid: string) => {
+    await setDoc(doc(db, "volunteers", uid), {
+      fullName: formData.fullName,
+      email: loginMethod === "email" ? formData.email : null,
+      phoneNumber: loginMethod === "phone" ? formData.phoneNumber : null,
+      curp: formData.curp,
+      ine: formData.ine,
+      emergencyContact: formData.emergencyContact,
+      bloodType: formData.bloodType,
+      medicalCondition: formData.medicalCondition,
+      area: selectedArea,
+      createdAt: new Date(),
+      isApproved: false,
+    });
+  };
+
+  const handleRegister = async () => {
+    try {
+      if (loginMethod === "email") {
+        if (!formData.email || !formData.password) {
+          alert("Por favor ingresa correo y contraseña");
+          return;
+        }
+        const userCredential = await createUserWithEmailAndPassword(
+          auth, formData.email, formData.password
+        );
+        await saveUserData(userCredential.user.uid);
+        alert("Registro exitoso, te notificaremos cuando seas aprobado");
+      } else if (loginMethod === "phone") {
+        if (!formData.phoneNumber) {
+          alert("Por favor ingresa tu número de teléfono");
+          return;
+        }
+        const confirmation = await signInWithPhoneNumber(
+          auth, formData.phoneNumber, recaptchaVerifier.current!
+        );
+        setConfirmationResult(confirmation);
+        setShowOtpModal(true);
+      }
+    } catch (error: any) {
+      console.error("Error en registro:", error.message);
+      alert("Error: " + error.message);
+    }
+  };
+
+  const confirmOTP = async () => {
+    try {
+      const userCredential = await confirmationResult.confirm(otpCode);
+      const user = userCredential.user;
+
+      await saveUserData(user.uid);
+      setShowOtpModal(false);
+      alert("Registro exitoso, te notificaremos cuando seas aprobado");
+    } catch (error: any) {
+      console.log("Error OTP:", error.message);
+      alert("Código incorrecto. Intenta de nuevo.");
+    }
   };
 
   const renderAreaItem = ({ item }: { item: AreaOption }) => (
@@ -71,6 +139,12 @@ const RegisterScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Recaptcha invisible */}
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={auth.app.options as any}
+      />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           {/* Header */}
@@ -152,28 +226,33 @@ const RegisterScreen: React.FC = () => {
                   placeholder="Número telefónico"
                   placeholderTextColor="#595959"
                   value={formData.phoneNumber}
-                  onChangeText={(value) => handleInputChange('phoneNumber', value)}
+                  onChangeText={(value) => {
+                    const formatted = value.startsWith('+') ? value : `+52${value}`;
+                    handleInputChange('phoneNumber', formatted);
+                  }}
                   keyboardType="phone-pad"
                 />
               </View>
             )}
 
-            {/* Password Field */}
-            <View style={styles.inputRow}>
-              <Image 
-                source={require('../../assets/contrasenaIcon.png')} 
-                style={styles.inputIcon}
-                resizeMode="contain"
-              />
-              <TextInput
-                style={styles.textInput}
-                placeholder="Contraseña"
-                placeholderTextColor="#595959"
-                value={formData.password}
-                onChangeText={(value) => handleInputChange('password', value)}
-                secureTextEntry
-              />
-            </View>
+            {/* Password Field - Only show for email registration */}
+            {loginMethod === 'email' && (
+              <View style={styles.inputRow}>
+                <Image 
+                  source={require('../../assets/contrasenaIcon.png')} 
+                  style={styles.inputIcon}
+                  resizeMode="contain"
+                />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Contraseña"
+                  placeholderTextColor="#595959"
+                  value={formData.password}
+                  onChangeText={(value) => handleInputChange('password', value)}
+                  secureTextEntry
+                />
+              </View>
+            )}
 
             {/* Full Name Field */}
             <View style={styles.inputRow}>
@@ -324,10 +403,34 @@ const RegisterScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Modal OTP */}
+      <Modal
+        visible={showOtpModal}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Te enviamos un código por SMS</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Ingresa el código aquí"
+              keyboardType="number-pad"
+              value={otpCode}
+              onChangeText={setOtpCode}
+            />
+            <TouchableOpacity style={styles.registerButton} onPress={confirmOTP}>
+              <Text style={styles.registerButtonText}>Confirmar código</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
+// Styles moved outside the component
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -411,7 +514,6 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     marginRight: 12,
-    // Removemos tintColor para evitar cuadrados negros
   },
   textInput: {
     flex: 1,
