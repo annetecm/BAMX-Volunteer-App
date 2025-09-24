@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_API_KEY!,
@@ -9,9 +10,23 @@ const firebaseConfig = {
   storageBucket: process.env.EXPO_PUBLIC_STORAGE_BUCKET!,
   messagingSenderId: process.env.EXPO_PUBLIC_MESSAGING_SENDER_ID!,
   appId: process.env.EXPO_PUBLIC_APP_ID!,
+
+  
 };
 
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
+
+/*/if (__DEV__) {
+  // Connect Auth emulator
+  connectAuthEmulator(auth, "http://localhost:9099");
+  
+  // Connect Firestore emulator (optional)
+  connectFirestoreEmulator(db, 'localhost', 8080);
+}
+  /*/
+
+  
