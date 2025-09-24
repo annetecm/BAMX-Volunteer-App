@@ -8,9 +8,15 @@ import {MainScreen} from './src/screens/MainScreen';
 import {VolunteerAdmin} from './src/screens/VolunteerAdmin';
 import {AdminTasksScreen} from './src/screens/AdminTasksScreen';
 
+
+
 export default function App() {
-    return <AdminTasksScreen />;
+   // return <AdminTasksScreen />
+    return <RegisterScreen />
+    
+    ;
 }
+
 
 const styles = StyleSheet.create({
   container: {
