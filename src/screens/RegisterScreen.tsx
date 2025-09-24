@@ -5,12 +5,9 @@ import {
   signInWithPhoneNumber 
 } from "firebase/auth";
 import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
-import { FirebaseApp } from "firebase/app";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { doc, setDoc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as DocumentPicker from 'expo-document-picker';
-
 
 import {
   View,
@@ -70,7 +67,7 @@ const RegisterScreen: React.FC = () => {
   const [uploading, setUploading] = useState(false);
 
   const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
-  const storage = getStorage();
+
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -112,167 +109,176 @@ const RegisterScreen: React.FC = () => {
     }
   };
 
+  // Función para sanitizar nombres de archivo
+  const sanitizeFilename = (filename: string): string => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 6);
+    const extension = filename.split('.').pop()?.toLowerCase() || 'pdf';
+    return `doc_${timestamp}_${random}.${extension}`;
+  };
 
+  const convertFileToBase64 = async (document: DocumentFile): Promise<string> => {
+    try {
+      const response = await fetch(document.uri);
+      const blob = await response.blob();
+      
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            resolve(reader.result);
+          } else {
+            reject(new Error('Failed to convert to base64'));
+          }
+        };
+        reader.onerror = () => reject(new Error('FileReader error'));
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      throw new Error(`Error converting file: ${error}`);
+    }
+  };
 
-// Función para sanitizar nombres de archivo
-const sanitizeFilename = (filename: string): string => {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 6);
-  const extension = filename.split('.').pop()?.toLowerCase() || 'pdf';
-  return `doc_${timestamp}_${random}.${extension}`;
-};
+  
+  // Función para guardar datos del usuario y del voluntario en tablas separadas
+  const saveUserData = async (uid: string) => {
+    try {
+      setUploading(true);
+      
+      let ineBase64 = null;
+      let medicalBase64 = null;
+      let ineMetadata = null;
+      let medicalMetadata = null;
 
-
-const convertFileToBase64 = async (document: DocumentFile): Promise<string> => {
-  try {
-    const response = await fetch(document.uri);
-    const blob = await response.blob();
-    
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          resolve(reader.result);
-        } else {
-          reject(new Error('Failed to convert to base64'));
+      // Convertir INE a base64 si existe y es < 1MB
+      if (ineDocument) {
+        const response = await fetch(ineDocument.uri);
+        const blob = await response.blob();
+        
+        if (blob.size > 1024 * 1024) { // 1MB
+          throw new Error("El archivo INE es demasiado grande (máximo 1MB)");
         }
-      };
-      reader.onerror = () => reject(new Error('FileReader error'));
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    throw new Error(`Error converting file: ${error}`);
-  }
-};
-
-// Función para guardar documentos
-const saveUserData = async (uid: string) => {
-  try {
-    setUploading(true);
-    
-    let ineBase64 = null;
-    let medicalBase64 = null;
-    let ineMetadata = null;
-    let medicalMetadata = null;
-
-    // Convertir INE a base64 si existe y es < 1MB
-    if (ineDocument) {
-      const response = await fetch(ineDocument.uri);
-      const blob = await response.blob();
-      
-      if (blob.size > 1024 * 1024) { // 1MB
-        throw new Error("El archivo INE es demasiado grande (máximo 1MB)");
+        
+        console.log("📄 Convirtiendo INE a base64...");
+        ineBase64 = await convertFileToBase64(ineDocument);
+        ineMetadata = {
+          name: ineDocument.name,
+          type: ineDocument.type,
+          size: blob.size
+        };
+        console.log("INE convertido a b64 exitosamente");
       }
+
+      // Convertir constancia médica a base64 si existe y es < 1MB
+      if (medicalDocument) {
+        const response = await fetch(medicalDocument.uri);
+        const blob = await response.blob();
+        
+        if (blob.size > 1024 * 1024) { // 1MB
+          throw new Error("La constancia medica es demasiado grande (máximo 1MB)");
+        }
+        
+        console.log("Convirtiendo constancia médica a base64...");
+        medicalBase64 = await convertFileToBase64(medicalDocument);
+        medicalMetadata = {
+          name: medicalDocument.name,
+          type: medicalDocument.type,
+          size: blob.size
+        };
+        console.log("Constancia médica convertida a b64 exitosamente");
+      }
+
+      // Guardar datos en tabla Users
+      await setDoc(doc(db, "users", uid), {
+        id: uid,
+        fullName: formData.fullName,
+        email: loginMethod === "email" ? formData.email : null,
+        phone_number: loginMethod === "phone" ? formData.phoneNumber : null,
+        // No incluimos el campo password para mayor seguridad
+        role: "volunteer", // Rol por defecto para registros desde esta pantalla
+        state: "pendiente", // Estado inicial pendiente de aprobación (pendiente/aprobado)
+        createdAt: new Date(),
+      });
+
+      // Guardar datos en tabla Volunteers
+      await setDoc(doc(db, "volunteers", uid), {
+        id_volunteer: uid,
+        correo: loginMethod === "email" ? formData.email : null,
+  
+        curp: formData.curp,
+        
+        // Documentos como base64
+        ine: ineBase64 ? {
+          data: ineBase64,
+          metadata: ineMetadata
+        } : null,
+        
+        emergency_phone: formData.emergencyContact,
+        blood_type: formData.bloodType,
+        
+        medical_certificate: medicalBase64 ? {
+          data: medicalBase64,
+          metadata: medicalMetadata
+        } : null,
+        
+        total_accredited_hr: 0, // Inicializar en 0
+        week_accredited_hr: 0,  // Inicializar en 0
+        area: selectedArea, // Área seleccionada por el voluntario
+        createdAt: new Date(),
+      });
+
+      console.log("Datos guardados exitosamente en ambas colecciones");
+      setUploading(false);
       
-      console.log("📄 Convirtiendo INE a base64...");
-      ineBase64 = await convertFileToBase64(ineDocument);
-      ineMetadata = {
-        name: ineDocument.name,
-        type: ineDocument.type,
-        size: blob.size
-      };
-      console.log("INE convertido a b64 exitosamente");
+    } catch (error) {
+      console.error("Error guardando datos:", error);
+      setUploading(false);
+      throw error;
     }
+  };
 
-    // Convertir constancia médica a base64 si existe y es < 1MB
-    if (medicalDocument) {
-      const response = await fetch(medicalDocument.uri);
-      const blob = await response.blob();
-      
-      if (blob.size > 1024 * 1024) { // 1MB
-        throw new Error("El archivo médico es demasiado grande (máximo 1MB)");
+  const handleRegister = async () => {
+    try {
+      if (loginMethod === "email") {
+        if (!formData.email || !formData.password) {
+          Alert.alert("Error", "Por favor ingresa correo y contraseña");
+          return;
+        }
+        const userCredential = await createUserWithEmailAndPassword(
+          auth, formData.email, formData.password
+        );
+        await saveUserData(userCredential.user.uid);
+        Alert.alert("¡Gracias!", "Solicitud de egistro exitosa, te notificaremos cuando seas aprobado");
+      } else if (loginMethod === "phone") {
+        if (!formData.phoneNumber) {
+          Alert.alert("Error", "Por favor ingresa tu número de teléfono");
+          return;
+        }
+        const confirmation = await signInWithPhoneNumber(
+          auth, formData.phoneNumber, recaptchaVerifier.current!
+        );
+        setConfirmationResult(confirmation);
+        setShowOtpModal(true);
       }
-      
-      console.log("📄 Convirtiendo constancia médica a base64...");
-      medicalBase64 = await convertFileToBase64(medicalDocument);
-      medicalMetadata = {
-        name: medicalDocument.name,
-        type: medicalDocument.type,
-        size: blob.size
-      };
-      console.log("Constancia médica convertida a b64exitosamente");
+    } catch (error: any) {
+      console.error("Error en registro:", error.message);
+      Alert.alert("Error", error.message);
     }
+  };
 
-    // Guardar datos en Firestore incluyendo los archivos como base64
-    await setDoc(doc(db, "volunteers", uid), {
-      // Datos del formulario
-      fullName: formData.fullName,
-      email: loginMethod === "email" ? formData.email : null,
-      phoneNumber: loginMethod === "phone" ? formData.phoneNumber : null,
-      curp: formData.curp,
-      emergencyContact: formData.emergencyContact,
-      bloodType: formData.bloodType,
-      area: selectedArea,
-      
-      // Documentos como base64
-      ineDocument: ineBase64 ? {
-        data: ineBase64,
-        metadata: ineMetadata
-      } : null,
-      
-      medicalDocument: medicalBase64 ? {
-        data: medicalBase64,
-        metadata: medicalMetadata
-      } : null,
-      
-      createdAt: new Date(),
-      isApproved: false,
-    });
-
-    console.log("Datos guardados exitosamente en Firestore");
-    setUploading(false);
-    
-  } catch (error) {
-    console.error("Error guardando datos:", error);
-    setUploading(false);
-    throw error;
-  }
-};
-
-
- const handleRegister = async () => {
-  try {
-    if (loginMethod === "email") {
-      if (!formData.email || !formData.password) {
-        Alert.alert("Error", "Por favor ingresa correo y contraseña");
-        return;
-      }
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, formData.email, formData.password
-      );
-      // CAMBIO: Usar saveUserData en lugar de saveUserData
-      await saveUserData(userCredential.user.uid);
-      Alert.alert("Éxito", "Registro exitoso, te notificaremos cuando seas aprobado");
-    } else if (loginMethod === "phone") {
-      if (!formData.phoneNumber) {
-        Alert.alert("Error", "Por favor ingresa tu número de teléfono");
-        return;
-      }
-      const confirmation = await signInWithPhoneNumber(
-        auth, formData.phoneNumber, recaptchaVerifier.current!
-      );
-      setConfirmationResult(confirmation);
-      setShowOtpModal(true);
-    }
-  } catch (error: any) {
-    console.error("Error en registro:", error.message);
-    Alert.alert("Error", error.message);
-  }
-};
   const confirmOTP = async () => {
-  try {
-    const userCredential = await confirmationResult.confirm(otpCode);
-    const user = userCredential.user;
+    try {
+      const userCredential = await confirmationResult.confirm(otpCode);
+      const user = userCredential.user;
 
-    // CAMBIO: Usar saveUserData en lugar de saveUserData
-    await saveUserData(user.uid);
-    setShowOtpModal(false);
-    Alert.alert("Éxito", "Registro exitoso, te notificaremos cuando seas aprobado");
-  } catch (error: any) {
-    console.log("Error OTP:", error.message);
-    Alert.alert("Error", "Código incorrecto. Intenta de nuevo.");
-  }
-};
+      await saveUserData(user.uid);
+      setShowOtpModal(false);
+      Alert.alert("¡Gracias!", "Solicitud de egistro exitosa, te notificaremos cuando seas aprobado");
+    } catch (error: any) {
+      console.log("Error OTP:", error.message);
+      Alert.alert("Error", "Código incorrecto. Intenta de nuevo.");
+    }
+  };
 
   const renderAreaItem = ({ item }: { item: AreaOption }) => (
     <TouchableOpacity
