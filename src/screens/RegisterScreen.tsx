@@ -8,6 +8,8 @@ import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { doc, setDoc } from "firebase/firestore";
 import * as DocumentPicker from 'expo-document-picker';
+import { signOut } from "firebase/auth";
+
 
 import {
   View,
@@ -238,47 +240,62 @@ const RegisterScreen: React.FC = () => {
   };
 
   const handleRegister = async () => {
-    try {
-      if (loginMethod === "email") {
-        if (!formData.email || !formData.password) {
-          Alert.alert("Error", "Por favor ingresa correo y contraseña");
-          return;
-        }
-        const userCredential = await createUserWithEmailAndPassword(
-          auth, formData.email, formData.password
-        );
-        await saveUserData(userCredential.user.uid);
-        Alert.alert("¡Gracias!", "Solicitud de egistro exitosa, te notificaremos cuando seas aprobado");
-      } else if (loginMethod === "phone") {
-        if (!formData.phoneNumber) {
-          Alert.alert("Error", "Por favor ingresa tu número de teléfono");
-          return;
-        }
-        const confirmation = await signInWithPhoneNumber(
-          auth, formData.phoneNumber, recaptchaVerifier.current!
-        );
-        setConfirmationResult(confirmation);
-        setShowOtpModal(true);
+  try {
+    if (loginMethod === "email") {
+      if (!formData.email || !formData.password) {
+        Alert.alert("Error", "Por favor ingresa correo y contraseña");
+        return;
       }
-    } catch (error: any) {
-      console.error("Error en registro:", error.message);
-      Alert.alert("Error", error.message);
-    }
-  };
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, formData.email, formData.password
+      );
+      await saveUserData(userCredential.user.uid);
 
-  const confirmOTP = async () => {
-    try {
-      const userCredential = await confirmationResult.confirm(otpCode);
-      const user = userCredential.user;
+      // 👇 Forzar logout
+      await signOut(auth);
 
-      await saveUserData(user.uid);
-      setShowOtpModal(false);
-      Alert.alert("¡Gracias!", "Solicitud de egistro exitosa, te notificaremos cuando seas aprobado");
-    } catch (error: any) {
-      console.log("Error OTP:", error.message);
-      Alert.alert("Error", "Código incorrecto. Intenta de nuevo.");
+      Alert.alert(
+        "¡Gracias!",
+        "Solicitud de registro exitosa. El administrador revisará tu cuenta y podrás iniciar sesión una vez aprobada."
+      );
+    } else if (loginMethod === "phone") {
+      if (!formData.phoneNumber) {
+        Alert.alert("Error", "Por favor ingresa tu número de teléfono");
+        return;
+      }
+      const confirmation = await signInWithPhoneNumber(
+        auth, formData.phoneNumber, recaptchaVerifier.current!
+      );
+      setConfirmationResult(confirmation);
+      setShowOtpModal(true);
     }
-  };
+  } catch (error: any) {
+    console.error("Error en registro:", error.message);
+    Alert.alert("Error", error.message);
+  }
+};
+
+const confirmOTP = async () => {
+  try {
+    const userCredential = await confirmationResult.confirm(otpCode);
+    const user = userCredential.user;
+
+    await saveUserData(user.uid);
+
+    // 👇 Forzar logout
+    await signOut(auth);
+
+    setShowOtpModal(false);
+    Alert.alert(
+      "¡Gracias!",
+      "Solicitud de registro exitosa. El administrador revisará tu cuenta y podrás iniciar sesión una vez aprobada."
+    );
+  } catch (error: any) {
+    console.log("Error OTP:", error.message);
+    Alert.alert("Error", "Código incorrecto. Intenta de nuevo.");
+  }
+};
+
 
   const renderAreaItem = ({ item }: { item: AreaOption }) => (
     <TouchableOpacity
