@@ -1,5 +1,10 @@
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import VolunteerScreen from './src/screens/VolunteersScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import Login from './src/screens/Login';
@@ -9,12 +14,73 @@ import {VolunteerAdmin} from './src/screens/VolunteerAdmin';
 import {AdminTasksScreen} from './src/screens/AdminTasksScreen';
 
 
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, db } from './src/firebaseConfig';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+export type RootStackParamList = {
+  Login: undefined;
+  Main: undefined;
+  Register: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+function AuthGate() {
+  const [init, setInit] = React.useState(true);
+  const [user, setUser] = React.useState<User | null>(null);
+
+  React.useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+
+      // Bootstrap: asegura users/{uid} para que MainScreen no falle al leer fullName
+      if (u) {
+        const ref = doc(db, 'users', u.uid);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          await setDoc(ref, {
+            fullName: u.displayName ?? '',
+            email: u.email ?? null,
+            phone_number: u.phoneNumber ?? null,
+            role: 'volunteer',
+            state: 'pendiente',
+            createdAt: Date.now(),
+          });
+        }
+      }
+
+      setInit(false);
+    });
+    return unsub;
+  }, []);
+
+  if (init) {
+    return (
+      <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+ return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {user ? (
+          <Stack.Screen name="Main" component={MainScreen} />
+        ) : (
+          <>
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+          </>
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
 
 export default function App() {
-   // return <AdminTasksScreen />
-    return <RegisterScreen />
-    
-    ;
+  return <AuthGate />;
 }
 
 
