@@ -1,15 +1,11 @@
 import { auth, db } from "../firebaseConfig";
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { 
-  createUserWithEmailAndPassword, 
-  signInWithPhoneNumber 
+  createUserWithEmailAndPassword
 } from "firebase/auth";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { doc, setDoc } from "firebase/firestore";
 import * as DocumentPicker from 'expo-document-picker';
-import { signOut } from "firebase/auth";
-
 
 import {
   View,
@@ -24,8 +20,6 @@ import {
   Alert,
 } from 'react-native';
 
-type LoginMethod = 'phone' | 'email';
-
 interface AreaOption {
   id: string;
   label: string;
@@ -39,17 +33,15 @@ interface DocumentFile {
 
 const areaOptions: AreaOption[] = [
   { id: '1', label: 'Empaquetamiento de alimentos' },
-  { id: '2', label: 'ClasificaciÃ³n de donaciones' },
-  { id: '3', label: 'AtenciÃ³n al pÃºblico' },
-  { id: '4', label: 'DistribuciÃ³n de despensas' },
+  { id: '2', label: 'Clasificación de donaciones' },
+  { id: '3', label: 'Atención al público' },
+  { id: '4', label: 'Distribución de despensas' },
   { id: '5', label: 'Actividades recreativas' },
   { id: '6', label: 'Mantenimiento' },
 ];
 
 const RegisterScreen: React.FC = () => {
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>('phone');
   const [formData, setFormData] = useState({
-    phoneNumber: '',
     email: '',
     password: '',
     fullName: '',
@@ -59,16 +51,11 @@ const RegisterScreen: React.FC = () => {
   });
   const [selectedArea, setSelectedArea] = useState<string>('');
   const [showAreaModal, setShowAreaModal] = useState<boolean>(false);
-  const [confirmationResult, setConfirmationResult] = useState<any>(null);
-  const [otpCode, setOtpCode] = useState("");
-  const [showOtpModal, setShowOtpModal] = useState(false);
   
   // Estados para documentos
   const [ineDocument, setIneDocument] = useState<DocumentFile | null>(null);
   const [medicalDocument, setMedicalDocument] = useState<DocumentFile | null>(null);
   const [uploading, setUploading] = useState(false);
-
-  const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
 
 
   const handleInputChange = (field: string, value: string) => {
@@ -83,7 +70,7 @@ const RegisterScreen: React.FC = () => {
     setShowAreaModal(false);
   };
 
-  // FunciÃ³n para seleccionar documento
+  // Función para seleccionar documento
   const pickDocument = async (documentType: 'ine' | 'medical') => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -111,7 +98,7 @@ const RegisterScreen: React.FC = () => {
     }
   };
 
-  // FunciÃ³n para sanitizar nombres de archivo
+  // Función para sanitizar nombres de archivo
   const sanitizeFilename = (filename: string): string => {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 6);
@@ -142,7 +129,7 @@ const RegisterScreen: React.FC = () => {
   };
 
   
-  // FunciÃ³n para guardar datos del usuario y del voluntario en tablas separadas
+  // Función para guardar datos del usuario y del voluntario en tablas separadas
   const saveUserData = async (uid: string) => {
     try {
       setUploading(true);
@@ -158,10 +145,10 @@ const RegisterScreen: React.FC = () => {
         const blob = await response.blob();
         
         if (blob.size > 1024 * 1024) { // 1MB
-          throw new Error("El archivo INE es demasiado grande (mÃ¡ximo 1MB)");
+          throw new Error("El archivo INE es demasiado grande (máximo 1MB)");
         }
         
-        console.log("ðŸ“„ Convirtiendo INE a base64...");
+        console.log("📄 Convirtiendo INE a base64...");
         ineBase64 = await convertFileToBase64(ineDocument);
         ineMetadata = {
           name: ineDocument.name,
@@ -171,41 +158,41 @@ const RegisterScreen: React.FC = () => {
         console.log("INE convertido a b64 exitosamente");
       }
 
-      // Convertir constancia mÃ©dica a base64 si existe y es < 1MB
+      // Convertir constancia médica a base64 si existe y es < 1MB
       if (medicalDocument) {
         const response = await fetch(medicalDocument.uri);
         const blob = await response.blob();
         
         if (blob.size > 1024 * 1024) { // 1MB
-          throw new Error("La constancia medica es demasiado grande (mÃ¡ximo 1MB)");
+          throw new Error("La constancia medica es demasiado grande (máximo 1MB)");
         }
         
-        console.log("Convirtiendo constancia mÃ©dica a base64...");
+        console.log("Convirtiendo constancia médica a base64...");
         medicalBase64 = await convertFileToBase64(medicalDocument);
         medicalMetadata = {
           name: medicalDocument.name,
           type: medicalDocument.type,
           size: blob.size
         };
-        console.log("Constancia mÃ©dica convertida a b64 exitosamente");
+        console.log("Constancia médica convertida a b64 exitosamente");
       }
 
       // Guardar datos en tabla Users
       await setDoc(doc(db, "users", uid), {
         id: uid,
         fullName: formData.fullName,
-        email: loginMethod === "email" ? formData.email : null,
-        phone_number: loginMethod === "phone" ? formData.phoneNumber : null,
+        email: formData.email,
+        phone_number: null,
         // No incluimos el campo password para mayor seguridad
         role: "volunteer", // Rol por defecto para registros desde esta pantalla
-        state: "pendiente", // Estado inicial pendiente de aprobaciÃ³n (pendiente/aprobado)
+        state: "pendiente", // Estado inicial pendiente de aprobación (pendiente/aprobado)
         createdAt: new Date(),
       });
 
       // Guardar datos en tabla Volunteers
       await setDoc(doc(db, "volunteers", uid), {
         id_volunteer: uid,
-        correo: loginMethod === "email" ? formData.email : null,
+        correo: formData.email,
   
         curp: formData.curp,
         
@@ -225,7 +212,7 @@ const RegisterScreen: React.FC = () => {
         
         total_accredited_hr: 0, // Inicializar en 0
         week_accredited_hr: 0,  // Inicializar en 0
-        area: selectedArea, // Ãrea seleccionada por el voluntario
+        area: selectedArea, // Área seleccionada por el voluntario
         createdAt: new Date(),
       });
 
@@ -240,61 +227,22 @@ const RegisterScreen: React.FC = () => {
   };
 
   const handleRegister = async () => {
-  try {
-    if (loginMethod === "email") {
+    try {
       if (!formData.email || !formData.password) {
-        Alert.alert("Error", "Por favor ingresa correo y contraseÃ±a");
+        Alert.alert("Error", "Por favor ingresa correo y contraseña");
         return;
       }
       const userCredential = await createUserWithEmailAndPassword(
         auth, formData.email, formData.password
       );
       await saveUserData(userCredential.user.uid);
-
-      // ðŸ‘‡ Forzar logout
-      await signOut(auth);
-
-      Alert.alert(
-        "Â¡Gracias!",
-        "Solicitud de registro exitosa. El administrador revisarÃ¡ tu cuenta y podrÃ¡s iniciar sesiÃ³n una vez aprobada."
-      );
-    } else if (loginMethod === "phone") {
-      if (!formData.phoneNumber) {
-        Alert.alert("Error", "Por favor ingresa tu nÃºmero de telÃ©fono");
-        return;
-      }
-      const confirmation = await signInWithPhoneNumber(
-        auth, formData.phoneNumber, recaptchaVerifier.current!
-      );
-      setConfirmationResult(confirmation);
-      setShowOtpModal(true);
+      Alert.alert("¡Gracias!", "Solicitud de egistro exitosa, te notificaremos cuando seas aprobado");
+    } catch (error: any) {
+      console.error("Error en registro:", error.message);
+      Alert.alert("Error", error.message);
     }
-  } catch (error: any) {
-    console.error("Error en registro:", error.message);
-    Alert.alert("Error", error.message);
-  }
-};
+  };
 
-const confirmOTP = async () => {
-  try {
-    const userCredential = await confirmationResult.confirm(otpCode);
-    const user = userCredential.user;
-
-    await saveUserData(user.uid);
-
-    // ðŸ‘‡ Forzar logout
-    await signOut(auth);
-
-    setShowOtpModal(false);
-    Alert.alert(
-      "Â¡Gracias!",
-      "Solicitud de registro exitosa. El administrador revisarÃ¡ tu cuenta y podrÃ¡s iniciar sesiÃ³n una vez aprobada."
-    );
-  } catch (error: any) {
-    console.log("Error OTP:", error.message);
-    Alert.alert("Error", "CÃ³digo incorrecto. Intenta de nuevo.");
-  }
-};
 
 
   const renderAreaItem = ({ item }: { item: AreaOption }) => (
@@ -308,120 +256,52 @@ const confirmOTP = async () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Recaptcha invisible */}
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={auth.app.options as any}
-      />
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>RegÃ­strate</Text>
-            <Text style={styles.subtitle}>Â¡Ãšnete como voluntario!</Text>
+            <Text style={styles.title}>Regístrate</Text>
+            <Text style={styles.subtitle}>¡Únete como voluntario!</Text>
           </View>
 
-          {/* Method Selector */}
-          <View style={styles.methodSelector}>
-            <View style={styles.methodSelectorBackground}>
-              <TouchableOpacity
-                style={[
-                  styles.methodOption,
-                  styles.leftOption,
-                  loginMethod === 'phone' && styles.activeMethodOption,
-                ]}
-                onPress={() => setLoginMethod('phone')}
-              >
-                <Text
-                  style={[
-                    styles.methodText,
-                    loginMethod === 'phone' && styles.activeMethodText,
-                  ]}
-                >
-                  NÃºmero telefÃ³nico
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.methodOption,
-                  styles.rightOption,
-                  loginMethod === 'email' && styles.activeMethodOption,
-                ]}
-                onPress={() => setLoginMethod('email')}
-              >
-                <Text
-                  style={[
-                    styles.methodText,
-                    loginMethod === 'email' && styles.activeMethodText,
-                  ]}
-                >
-                  Correo
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+
 
           {/* Input Fields */}
           <View style={styles.inputContainer}>
-            {/* Email or Phone Field */}
-            {loginMethod === 'email' ? (
-              <View style={styles.inputRow}>
-                <Image 
-                  source={require('../../assets/correoIcon.png')} 
-                  style={styles.inputIcon}
-                  resizeMode="contain"
-                />
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Correo"
-                  placeholderTextColor="#595959"
-                  value={formData.email}
-                  onChangeText={(value) => handleInputChange('email', value)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-            ) : (
-              <View style={styles.inputRow}>
-                <Image 
-                  source={require('../../assets/telefonoIcon.png')} 
-                  style={styles.inputIcon}
-                  resizeMode="contain"
-                />
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="NÃºmero telefÃ³nico"
-                  placeholderTextColor="#595959"
-                  value={formData.phoneNumber}
-                  onChangeText={(value) => {
-                    const formatted = value.startsWith('+') ? value : `+52${value}`;
-                    handleInputChange('phoneNumber', formatted);
-                  }}
-                  keyboardType="phone-pad"
-                />
-              </View>
-            )}
+            {/* Email Field */}
+            <View style={styles.inputRow}>
+              <Image 
+                source={require('../../assets/correoIcon.png')} 
+                style={styles.inputIcon}
+                resizeMode="contain"
+              />
+              <TextInput
+                style={styles.textInput}
+                placeholder="Correo"
+                placeholderTextColor="#595959"
+                value={formData.email}
+                onChangeText={(value) => handleInputChange('email', value)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
 
-            {/* Password Field - Only show for email registration */}
-            {loginMethod === 'email' && (
-              <View style={styles.inputRow}>
-                <Image 
-                  source={require('../../assets/contrasenaIcon.png')} 
-                  style={styles.inputIcon}
-                  resizeMode="contain"
-                />
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="ContraseÃ±a"
-                  placeholderTextColor="#595959"
-                  value={formData.password}
-                  onChangeText={(value) => handleInputChange('password', value)}
-                  secureTextEntry
-                />
-              </View>
-            )}
+            {/* Password Field */}
+            <View style={styles.inputRow}>
+              <Image 
+                source={require('../../assets/contrasenaIcon.png')} 
+                style={styles.inputIcon}
+                resizeMode="contain"
+              />
+              <TextInput
+                style={styles.textInput}
+                placeholder="Contraseña"
+                placeholderTextColor="#595959"
+                value={formData.password}
+                onChangeText={(value) => handleInputChange('password', value)}
+                secureTextEntry
+              />
+            </View>
 
             {/* Full Name Field */}
             <View style={styles.inputRow}>
@@ -467,7 +347,7 @@ const confirmOTP = async () => {
                 resizeMode="contain"
               />
               <Text style={[styles.textInput, styles.dropdownText]}>
-                {selectedArea || 'Ãrea en la que te gustarÃ­a aportar'}
+                {selectedArea || 'Área en la que te gustaría aportar'}
               </Text>
             </TouchableOpacity>
 
@@ -486,7 +366,7 @@ const confirmOTP = async () => {
                   {ineDocument ? ineDocument.name : 'Subir INE (PDF o imagen)'}
                 </Text>
                 {ineDocument && (
-                  <Text style={styles.documentStatus}>âœ“ Documento seleccionado</Text>
+                  <Text style={styles.documentStatus}>✓ Documento seleccionado</Text>
                 )}
               </View>
             </TouchableOpacity>
@@ -537,10 +417,10 @@ const confirmOTP = async () => {
               />
               <View style={styles.documentInfo}>
                 <Text style={[styles.textInput, medicalDocument ? styles.documentSelected : styles.dropdownText]}>
-                  {medicalDocument ? medicalDocument.name : 'Subir Constancia MÃ©dica (PDF o imagen)'}
+                  {medicalDocument ? medicalDocument.name : 'Subir Constancia Médica (PDF o imagen)'}
                 </Text>
                 {medicalDocument && (
-                  <Text style={styles.documentStatus}>âœ“ Documento seleccionado</Text>
+                  <Text style={styles.documentStatus}>✓ Documento seleccionado</Text>
                 )}
               </View>
             </TouchableOpacity>
@@ -553,7 +433,7 @@ const confirmOTP = async () => {
             disabled={uploading}
           >
             <Text style={styles.registerButtonText}>
-              {uploading ? 'Subiendo documentos...' : 'RegÃ­strate'}
+              {uploading ? 'Subiendo documentos...' : 'Regístrate'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -569,12 +449,12 @@ const confirmOTP = async () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Selecciona un Ã¡rea</Text>
+              <Text style={styles.modalTitle}>Selecciona un área</Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setShowAreaModal(false)}
               >
-                <Text style={styles.modalCloseText}>âœ•</Text>
+                <Text style={styles.modalCloseText}>✕</Text>
               </TouchableOpacity>
             </View>
             <FlatList
@@ -587,34 +467,7 @@ const confirmOTP = async () => {
         </View>
       </Modal>
 
-      {/* Modal OTP */}
-      <Modal
-        visible={showOtpModal}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Te enviamos un cÃ³digo por SMS</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Ingresa el cÃ³digo aquÃ­"
-              keyboardType="number-pad"
-              value={otpCode}
-              onChangeText={setOtpCode}
-            />
-            <TouchableOpacity 
-              style={[styles.registerButton, uploading && styles.registerButtonDisabled]} 
-              onPress={confirmOTP}
-              disabled={uploading}
-            >
-              <Text style={styles.registerButtonText}>
-                {uploading ? 'Subiendo documentos...' : 'Confirmar cÃ³digo'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -650,44 +503,7 @@ const styles = StyleSheet.create({
     color: '#595959',
     textAlign: 'left',
   },
-  methodSelector: {
-    marginBottom: 40,
-  },
-  methodSelectorBackground: {
-    backgroundColor: '#ededed',
-    borderRadius: 15,
-    height: 56,
-    flexDirection: 'row',
-    padding: 6,
-  },
-  methodOption: {
-    flex: 1,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 2,
-  },
-  leftOption: {},
-  rightOption: {},
-  activeMethodOption: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  methodText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4f4f4f',
-  },
-  activeMethodText: {
-    color: '#000000',
-  },
+
   inputContainer: {
     marginBottom: 40,
   },
