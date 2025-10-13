@@ -193,7 +193,6 @@ const RegisterScreen: React.FC = () => {
       await setDoc(doc(db, "volunteers", uid), {
         id_volunteer: uid,
         correo: formData.email,
-  
         curp: formData.curp,
         
         // Documentos como base64

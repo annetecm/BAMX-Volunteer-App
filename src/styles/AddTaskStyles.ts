@@ -1,0 +1,138 @@
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width } = Dimensions.get('window');
+
+export const addTaskStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120, // Espacio para el bottom navigation
+  },
+  mainTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1D1617',
+    textAlign: 'center',
+    marginTop: 30,
+    marginBottom: 20,
+    fontFamily: 'Poppins-Bold',
+  },
+  orangeContainer: {
+    backgroundColor: '#FF9B63',
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    paddingHorizontal: 40,
+    paddingTop: 35,
+    paddingBottom: 40,
+    marginHorizontal: 0,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 28,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.3)',
+    paddingBottom: 10,
+  },
+  inputIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+    paddingVertical: 0,
+  },
+  volunteersContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 30,
+  },
+  volunteersTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+    color: '#1D1617',
+    marginBottom: 20,
+  },
+  volunteerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFD8CE',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    shadowColor: 'rgba(29, 22, 23, 0.07)',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 1,
+    shadowRadius: 40,
+    elevation: 8,
+  },
+  volunteerCardSelected: {
+    backgroundColor: '#FFB4A0',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#852221',
+    opacity: 0.2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+    color: '#1D1617',
+    opacity: 1,
+  },
+  volunteerName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+    color: '#1D1617',
+    lineHeight: 21,
+  },
+  plusButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  plusText: {
+    fontSize: 24,
+    fontWeight: '400',
+    color: '#1D1B20',
+    lineHeight: 24,
+  },
+  createButton: {
+    backgroundColor: '#4CAF50',
+    marginHorizontal: 24,
+    marginTop: 30,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  createButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
+  },
+});

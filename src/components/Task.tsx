@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { taskStyles } from '../styles/TaskStyles';
 
-// Types
 export interface Task {
   id: string;
   title: string;
@@ -14,12 +13,12 @@ export interface Task {
 export interface Volunteer {
   id: string;
   name: string;
+  attended?: boolean;
 }
 
-// Task Filter Component
 interface TaskFilterProps {
-  activeFilter: 'pendientes' | 'listo';
-  onFilterChange: (filter: 'pendientes' | 'listo') => void;
+  activeFilter:'asistieron' | 'no-asistieron';
+  onFilterChange: (filter: 'asistieron' | 'no-asistieron') => void;
   completedCount: number;
   totalCount: number;
 }
@@ -30,43 +29,57 @@ export const TaskFilter: React.FC<TaskFilterProps> = ({
   completedCount, 
   totalCount 
 }) => {
+  // Detectar si estamos en modo tareas o asistencias
+  const isAttendanceMode = activeFilter === 'asistieron' || activeFilter === 'no-asistieron';
+  
   return (
     <View style={taskStyles.taskFilter}>
       <View style={taskStyles.taskInfo}>
-        <Text style={taskStyles.taskTitle}>Tus tareas</Text>
-        <Text style={taskStyles.taskCount}>({completedCount}/{totalCount}) Completadas</Text>
+        <Text style={taskStyles.taskTitle}>
+          {isAttendanceMode ? 'Voluntarios' : 'Asistencias'}
+        </Text>
+        <Text style={taskStyles.taskCount}>
+          {isAttendanceMode 
+            ? `(${completedCount}/${totalCount}) Asistieron` 
+            : `(${completedCount}/${totalCount}) Completadas`
+          }
+        </Text>
       </View>
       
       <View style={taskStyles.filterButtons}>
-        <TouchableOpacity
-          style={[
-            taskStyles.filterButton,
-            activeFilter === 'pendientes' && taskStyles.activeFilterButton,
-          ]}
-          onPress={() => onFilterChange('pendientes')}
-        >
-          <Text style={[
-            taskStyles.filterButtonText,
-            activeFilter === 'pendientes' && taskStyles.activeFilterText,
-          ]}>
-            Pendientes
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            taskStyles.filterButton,
-            activeFilter === 'listo' && taskStyles.activeFilterButton,
-          ]}
-          onPress={() => onFilterChange('listo')}
-        >
-          <Text style={[
-            taskStyles.filterButtonText,
-            activeFilter === 'listo' && taskStyles.activeFilterText,
-          ]}>
-            Listo
-          </Text>
-        </TouchableOpacity>
+        {isAttendanceMode ? (
+          <>
+            <TouchableOpacity
+              style={[
+                taskStyles.filterButton,
+                activeFilter === 'asistieron' && taskStyles.activeFilterButton,
+              ]}
+              onPress={() => onFilterChange('asistieron')}
+            >
+              <Text style={[
+                taskStyles.filterButtonText,
+                activeFilter === 'asistieron' && taskStyles.activeFilterText,
+              ]}>
+                Asistieron
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                taskStyles.filterButton,
+                activeFilter === 'no-asistieron' && taskStyles.activeFilterButton,
+              ]}
+              onPress={() => onFilterChange('no-asistieron')}
+            >
+              <Text style={[
+                taskStyles.filterButtonText,
+                activeFilter === 'no-asistieron' && taskStyles.activeFilterText,
+              ]}>
+                No asistieron
+              </Text>
+            </TouchableOpacity>
+          </>
+        ):null}
       </View>
     </View>
   );
@@ -139,7 +152,7 @@ export const AdminTaskItem: React.FC<AdminTaskItemProps> = ({ task, onPress }) =
   return (
     <TouchableOpacity style={taskStyles.adminTaskItem} onPress={onPress}>
       <View style={taskStyles.adminTaskIcon}>
-        <Text style={taskStyles.adminTaskIconText}>−</Text>
+        <Text style={taskStyles.adminTaskIconText}>∑</Text>
       </View>
       <View style={taskStyles.adminTaskContent}>
         <Text style={taskStyles.adminTaskTitle}>{task.title}</Text>
@@ -164,7 +177,7 @@ export const VolunteerItem: React.FC<VolunteerItemProps> = ({ volunteer, onPress
   return (
     <TouchableOpacity style={taskStyles.volunteerItem} onPress={onPress}>
       <View style={taskStyles.volunteerIcon}>
-        <Text style={taskStyles.volunteerIconText}>−</Text>
+        <Text style={taskStyles.volunteerIconText}>∑</Text>
       </View>
       <Text style={taskStyles.volunteerName}>{volunteer.name}</Text>
     </TouchableOpacity>

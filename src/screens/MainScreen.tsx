@@ -1,21 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, SafeAreaView, ActivityIndicator, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Header } from '../components/Header';
 import { Calendar } from '../components/Calendar';
-import { TaskFilter, TaskItem, Task } from '../components/Task';
+import { TaskFilter, VolunteerItem, Volunteer } from '../components/Task';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { screenStyles } from '../styles/ScreenStyles';
 
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 
+type RootStackParamList = {
+  Main: undefined;
+  AddTask: undefined;
+  Settings: undefined;
+  AdminTasks: undefined; // ✅ Agregada
+  VolunteerAdmin: undefined; // ✅ Agregada
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Main'>;
+
 export const MainScreen: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState<'pendientes' | 'listo'>('pendientes');
+  const navigation = useNavigation<NavigationProp>();
+  const [activeFilter, setActiveFilter] = useState<'asistieron' | 'no-asistieron'>('asistieron');
   const [activeTab, setActiveTab] = useState('home');
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: '1', title: 'Separar los bienes', deadline: 'Mar 13, 2022', completed: false },
-    { id: '2', title: 'Empaquetar despensas', deadline: 'Mar 13, 2022', completed: false },
-    { id: '3', title: 'Limpieza del área', deadline: 'Mar 13, 2022', completed: true },
+  const [volunteers, setVolunteers] = useState<Volunteer[]>([
+    { id: '1', name: 'Juan Pérez', attended: true },
+    { id: '2', name: 'María González', attended: true },
+    { id: '3', name: 'Carlos Rodríguez', attended: false },
+    { id: '4', name: 'Ana Martínez', attended: true },
+    { id: '5', name: 'Luis Hernández', attended: false },
   ]);
 
   const [userName, setUserName] = useState<string>('Voluntario');
@@ -55,14 +70,15 @@ export const MainScreen: React.FC = () => {
     })();
   }, []);
 
-  const toggleTask = (taskId: string) => {
-    setTasks(prev =>
-      prev.map(task => (task.id === taskId ? { ...task, completed: !task.completed } : task))
-    );
+  const handleVolunteerPress = (volunteerId: string) => {
+    console.log('Voluntario seleccionado:', volunteerId);
   };
 
-  const completedTasks = tasks.filter(t => t.completed).length;
-  const filteredTasks = tasks.filter(t => (activeFilter === 'pendientes' ? !t.completed : t.completed));
+  const attendedVolunteers = volunteers.filter(v => v.attended).length;
+  const attendancePercentage = Math.round((attendedVolunteers / volunteers.length) * 100);
+  const filteredVolunteers = volunteers.filter(v => 
+    activeFilter === 'asistieron' ? v.attended : !v.attended
+  );
 
   if (loadingUser) {
     return (
@@ -78,9 +94,9 @@ export const MainScreen: React.FC = () => {
     <SafeAreaView style={screenStyles.container}>
       <Header
         userName={userName}
-        title="Explorador de tareas"
+        title="Registro de asistencias"
         showProgress
-        progressPercentage={Math.round((completedTasks / tasks.length) * 100)}
+        progressPercentage={attendancePercentage}
         showCalendar
       />
 
@@ -95,13 +111,17 @@ export const MainScreen: React.FC = () => {
           <TaskFilter
             activeFilter={activeFilter}
             onFilterChange={setActiveFilter}
-            completedCount={completedTasks}
-            totalCount={tasks.length}
+            completedCount={attendedVolunteers}
+            totalCount={volunteers.length}
           />
 
           <View style={screenStyles.taskList}>
-            {filteredTasks.map(task => (
-              <TaskItem key={task.id} task={task} onToggle={toggleTask} />
+            {filteredVolunteers.map(volunteer => (
+              <VolunteerItem 
+                key={volunteer.id} 
+                volunteer={volunteer} 
+                onPress={() => handleVolunteerPress(volunteer.id)} 
+              />
             ))}
           </View>
         </View>
@@ -109,8 +129,14 @@ export const MainScreen: React.FC = () => {
 
       <BottomNavigation
         activeTab={activeTab}
-        onTabPress={setActiveTab}
-        userType="volunteer"
+        onTabPress={(tab) => {
+          if (tab === 'settings') {
+            navigation.navigate('Settings');
+          }
+          setActiveTab(tab);
+        }}
+        onNavigateToAddTask={() => navigation.navigate('AddTask')}
+        onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')} // ✅ Buzón a AdminTasks
       />
     </SafeAreaView>
   );

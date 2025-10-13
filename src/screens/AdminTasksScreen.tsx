@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
 import { View, ScrollView, SafeAreaView, Text } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Header } from '../components/Header';
 import { AdminTaskItem, Task } from '../components/Task';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { screenStyles } from '../styles/ScreenStyles';
 
+type RootStackParamList = {
+  Main: undefined;
+  AddTask: undefined;
+  Settings: undefined;
+  AdminTasks: undefined;
+  VolunteerAdmin: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdminTasks'>;
+
 export const AdminTasksScreen: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('home');
+  const navigation = useNavigation<NavigationProp>();
+  const [activeTab, setActiveTab] = useState('mailbox');
   const [tasks] = useState<Task[]>([
     { id: '1', title: 'Separar los bienes', deadline: 'Mar 13, 2022', completed: false, assistants: 1 },
     { id: '2', title: 'Empaquetar despensas', deadline: 'Mar 13, 2022', completed: false, assistants: 2 },
@@ -17,13 +30,17 @@ export const AdminTasksScreen: React.FC = () => {
 
   const handleTaskPress = (taskId: string) => {
     console.log('Task pressed:', taskId);
-    // Navegar a los detalles de la tarea o mostrar voluntarios asignados
+    // ✅ Navegar a VolunteerAdmin al tocar una tarea
+    navigation.navigate('VolunteerAdmin');
   };
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
-    // Aquí puedes manejar la navegación entre pantallas
-    console.log('Navegando a:', tab);
+    if (tab === 'settings') {
+      navigation.navigate('Settings');
+    } else if (tab === 'menu') {
+      navigation.navigate('Main');
+    }
   };
 
   return (
@@ -56,7 +73,8 @@ export const AdminTasksScreen: React.FC = () => {
       <BottomNavigation 
         activeTab={activeTab} 
         onTabPress={handleTabPress}
-        userType="admin" 
+        onNavigateToAddTask={() => navigation.navigate('AddTask')}
+        onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
       />
     </SafeAreaView>
   );
