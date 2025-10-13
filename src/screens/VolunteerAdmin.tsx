@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
 import { View, ScrollView, SafeAreaView, Text, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Header } from '../components/Header';
 import { VolunteerItem, Volunteer } from '../components/Task';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { screenStyles } from '../styles/ScreenStyles';
 
+type RootStackParamList = {
+  Main: undefined;
+  AddTask: undefined;
+  Settings: undefined;
+  AdminTasks: undefined;
+  VolunteerAdmin: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VolunteerAdmin'>;
+
 export const VolunteerAdmin: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('volunteers');
+  const navigation = useNavigation<NavigationProp>();
+  const [activeTab, setActiveTab] = useState('mailbox');
   const [volunteers] = useState<Volunteer[]>([
     { id: '1', name: 'Juan Luna Morales' },
     { id: '2', name: 'Fernanda Barragán' },
@@ -17,22 +30,24 @@ export const VolunteerAdmin: React.FC = () => {
 
   const handleVolunteerPress = (volunteerId: string) => {
     console.log('Volunteer pressed:', volunteerId);
-    // Navegar a los detalles del voluntario
   };
 
   const handleAddVolunteer = () => {
     console.log('Add volunteer pressed');
-    // Navegar a la pantalla de agregar voluntario o mostrar modal
   };
 
   const handleBackPress = () => {
-    console.log('Back pressed');
-    // Navegar hacia atrás (a la pantalla de admin tasks)
+    // ✅ Regresar a AdminTasks
+    navigation.navigate('AdminTasks');
   };
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
-    console.log('Navegando a:', tab);
+    if (tab === 'settings') {
+      navigation.navigate('Settings');
+    } else if (tab === 'menu') {
+      navigation.navigate('Main');
+    }
   };
 
   return (
@@ -40,7 +55,6 @@ export const VolunteerAdmin: React.FC = () => {
       <Header 
         userName="Andrea"
         title="Administrador de tareas"
-        // Removido showAddButton y onAddPress
       />
       
       <View style={screenStyles.adminContent}>
@@ -52,7 +66,6 @@ export const VolunteerAdmin: React.FC = () => {
             <Text style={screenStyles.adminSectionVTitle}>Voluntarios</Text>
           </View>
           
-          {/* Botón añadir voluntario movido aquí */}
           <TouchableOpacity style={screenStyles.addVolunteerButton} onPress={handleAddVolunteer}>
             <Text style={screenStyles.addVolunteerButtonText}>Añadir voluntario +</Text>
           </TouchableOpacity>
@@ -72,11 +85,12 @@ export const VolunteerAdmin: React.FC = () => {
           </ScrollView>
         </View>
       </View>
-      
+
       <BottomNavigation 
         activeTab={activeTab} 
         onTabPress={handleTabPress}
-        userType="admin" 
+        onNavigateToAddTask={() => navigation.navigate('AddTask')}
+        onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
       />
     </SafeAreaView>
   );

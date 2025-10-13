@@ -2,17 +2,17 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import VolunteerScreen from './src/screens/VolunteersScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import Login from './src/screens/Login';
 import RegisterScreen from './src/screens/RegisterScreen';
-import {MainScreen} from './src/screens/MainScreen';
-import {VolunteerAdmin} from './src/screens/VolunteerAdmin';
-import {AdminTasksScreen} from './src/screens/AdminTasksScreen';
-
+import { MainScreen } from './src/screens/MainScreen';
+import { VolunteerAdmin } from './src/screens/VolunteerAdmin';
+import { AdminTasksScreen } from './src/screens/AdminTasksScreen';
+import { AddTaskScreen } from './src/screens/AddTaskScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
 
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from './src/firebaseConfig';
@@ -22,6 +22,10 @@ export type RootStackParamList = {
   Login: undefined;
   Main: undefined;
   Register: undefined;
+  AddTask: undefined;
+  Settings: undefined;
+  AdminTasks: undefined;  // ✅ Nueva ruta
+  VolunteerAdmin: undefined;  // ✅ Nueva ruta
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -34,7 +38,6 @@ function AuthGate() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
 
-      // Bootstrap: asegura users/{uid} para que MainScreen no falle al leer fullName
       if (u) {
         const ref = doc(db, 'users', u.uid);
         const snap = await getDoc(ref);
@@ -57,17 +60,23 @@ function AuthGate() {
 
   if (init) {
     return (
-      <View style={{ flex:1, justifyContent:'center', alignItems:'center' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator />
       </View>
     );
   }
 
- return (
+  return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
-          <Stack.Screen name="Main" component={MainScreen} />
+          <>
+            <Stack.Screen name="Main" component={MainScreen} />
+            <Stack.Screen name="AddTask" component={AddTaskScreen} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="AdminTasks" component={AdminTasksScreen} />
+            <Stack.Screen name="VolunteerAdmin" component={VolunteerAdmin} />
+          </>
         ) : (
           <>
             <Stack.Screen name="Login" component={Login} />
@@ -82,7 +91,6 @@ function AuthGate() {
 export default function App() {
   return <AuthGate />;
 }
-
 
 const styles = StyleSheet.create({
   container: {

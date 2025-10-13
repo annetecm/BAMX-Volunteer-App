@@ -5,78 +5,56 @@ import { bottomNavStyles } from '../styles/BottomNavStyles';
 interface BottomNavProps {
   activeTab: string;
   onTabPress: (tab: string) => void;
-  userType: 'volunteer' | 'admin'; // Nueva prop para tipo de usuario
+  onNavigateToAddTask?: () => void;
+  onNavigateToAdminTasks?: () => void; // ✅ Nueva prop para ir a AdminTasks
 }
 
 export const BottomNavigation: React.FC<BottomNavProps> = ({ 
   activeTab, 
-  onTabPress, 
-  userType 
+  onTabPress,
+  onNavigateToAddTask,
+  onNavigateToAdminTasks
 }) => {
   
-  // Configuración de iconos según el tipo de usuario
-  const getNavConfig = () => {
-    if (userType === 'admin') {
-      return [
-        {
-          key: 'menu',
-          icon: require('../../assets/menu.png'),
-          activeIcon: require('../../assets/active.png'),
-        },
-        {
-          key: 'tasks',
-          icon: require('../../assets/add.png'),
-          activeIcon: require('../../assets/active.png'),
-        },
-        {
-          key: 'home',
-          icon: require('../../assets/apple.png'),
-          isCenter: true,
-        },
-        {
-          key: 'volunteers',
-          icon: require('../../assets/box.png'),
-          activeIcon: require('../../assets/active.png'),
-        },
-        {
-          key: 'settings',
-          icon: require('../../assets/settings.png'),
-          activeIcon: require('../../assets/active.png'),
-        },
-      ];
+  const navItems = [
+    {
+      key: 'menu',
+      icon: require('../../assets/menu.png'),
+      activeIcon: require('../../assets/active.png'),
+    },
+    {
+      key: 'tasks',
+      icon: require('../../assets/add.png'),
+      activeIcon: require('../../assets/active.png'),
+      action: 'addTask',
+    },
+    {
+      key: 'home',
+      icon: require('../../assets/apple.png'),
+      isCenter: true,
+    },
+    {
+      key: 'mailbox', // ✅ Buzón para ir a AdminTasks
+      icon: require('../../assets/box.png'),
+      activeIcon: require('../../assets/active.png'),
+      action: 'adminTasks',
+    },
+    {
+      key: 'settings',
+      icon: require('../../assets/settings.png'),
+      activeIcon: require('../../assets/active.png'),
+    },
+  ];
+
+  const handlePress = (item: any) => {
+    if (item.action === 'addTask' && onNavigateToAddTask) {
+      onNavigateToAddTask();
+    } else if (item.action === 'adminTasks' && onNavigateToAdminTasks) {
+      onNavigateToAdminTasks(); // ✅ Navegar a AdminTasks
     } else {
-      // Configuración para voluntarios
-      return [
-        {
-          key: 'menu',
-          icon: require('../../assets/menu.png'),
-          activeIcon: require('../../assets/active.png'),
-        },
-        {
-          key: 'qr',
-          icon: require('../../assets/qr.png'),
-          activeIcon: require('../../assets/active.png'),
-        },
-        {
-          key: 'home',
-          icon: require('../../assets/apple.png'),
-          isCenter: true,
-        },
-        {
-          key: 'rewards',
-          icon: require('../../assets/rewards.png'),
-          activeIcon: require('../../assets/active.png'),
-        },
-        {
-          key: 'settings',
-          icon: require('../../assets/settings.png'),
-          activeIcon: require('../../assets/active.png'),
-        },
-      ];
+      onTabPress(item.key);
     }
   };
-
-  const navItems = getNavConfig();
 
   return (
     <View style={bottomNavStyles.bottomNav}>
@@ -85,7 +63,6 @@ export const BottomNavigation: React.FC<BottomNavProps> = ({
         const iconSource = isActive ? item.activeIcon : item.icon;
         
         if (item.isCenter) {
-          // Botón central especial (solo decorativo, no funcional)
           return (
             <View
               key={item.key}
@@ -102,7 +79,6 @@ export const BottomNavigation: React.FC<BottomNavProps> = ({
           );
         }
 
-        // Botones laterales normales
         return (
           <TouchableOpacity
             key={item.key}
@@ -110,7 +86,7 @@ export const BottomNavigation: React.FC<BottomNavProps> = ({
               bottomNavStyles.navItem,
               isActive && bottomNavStyles.navItemActive
             ]}
-            onPress={() => onTabPress(item.key)}
+            onPress={() => handlePress(item)}
           >
             <Image 
               source={iconSource}
