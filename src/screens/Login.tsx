@@ -11,7 +11,12 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  sendPasswordResetEmail,
+} from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -25,43 +30,41 @@ const Login: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-  const unsub = onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
 
-    try {
-      const ref = doc(db, 'users', user.uid);
-      const snap = await getDoc(ref);
+      try {
+        const ref = doc(db, 'users', user.uid);
+        const snap = await getDoc(ref);
 
-      if (!snap.exists()) {
+        if (!snap.exists()) {
+          await signOut(auth);
+          Alert.alert(
+            'No se puede iniciar sesión',
+            'Tu cuenta no está registrada en la base de datos. Contacta al administrador.'
+          );
+          return;
+        }
+
+        const userData = snap.data();
+
+        if (userData.state === 'aprobado') {
+          navigation.replace('Main');
+        } else if (userData.state === 'pendiente') {
+          await signOut(auth);
+          Alert.alert('Cuenta en revisión', 'Tu cuenta está pendiente de aprobación por el administrador.');
+        } else {
+          await signOut(auth);
+          Alert.alert('Acceso denegado', 'Tu cuenta no está habilitada. Contacta al administrador.');
+        }
+      } catch (e: any) {
         await signOut(auth);
-        Alert.alert(
-          'No se puede iniciar sesión',
-          'Tu cuenta no está registrada en la base de datos. Contacta al administrador.'
-        );
-        return;
+        Alert.alert('Error', e?.message ?? 'No se pudo validar tu cuenta. Intenta de nuevo.');
       }
+    });
 
-      const userData = snap.data();
-
-      if (userData.state === "aprobado") {
-        navigation.replace('Main');
-      } else if (userData.state === "pendiente") {
-        await signOut(auth);
-        Alert.alert('Cuenta en revisión', 'Tu cuenta está pendiente de aprobación por el administrador.');
-      } else {
-        await signOut(auth);
-        Alert.alert('Acceso denegado', 'Tu cuenta no está habilitada. Contacta al administrador.');
-      }
-
-    } catch (e: any) {
-      await signOut(auth);
-      Alert.alert('Error', e?.message ?? 'No se pudo validar tu cuenta. Intenta de nuevo.');
-    }
-  });
-
-  return unsub;
-}, [navigation]);
-
+    return unsub;
+  }, [navigation]);
 
   const handleLogin = async () => {
     try {
@@ -79,10 +82,36 @@ const Login: React.FC<Props> = ({ navigation }) => {
       } else if (err?.code === 'auth/invalid-email') {
         Alert.alert('Correo inválido', 'Verifica el formato del correo.');
       } else {
-        Alert.alert('Error al iniciar sesión','Revisa tus credenciales.');
+        Alert.alert('Error al iniciar sesión', 'Revisa tus credenciales.');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      Alert.alert(
+        'Correo requerido',
+        'Escribe tu correo en el campo de “Correo” para enviarte el enlace de recuperación.'
+      );
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, trimmed);
+      Alert.alert(
+        'Revisa tu correo',
+        'Te enviamos un enlace para restablecer tu contraseña. Si no lo ves, revisa tu carpeta de spam.'
+      );
+    } catch (err: any) {
+      if (err?.code === 'auth/invalid-email') {
+        Alert.alert('Correo inválido', 'Verifica el formato del correo.');
+      } else if (err?.code === 'auth/user-not-found') {
+        Alert.alert('Usuario no encontrado', 'No existe una cuenta registrada con ese correo.');
+      } else {
+        Alert.alert('No se pudo enviar', 'Inténtalo de nuevo en unos minutos.');
+      }
     }
   };
 
@@ -132,6 +161,14 @@ const Login: React.FC<Props> = ({ navigation }) => {
               secureTextEntry
             />
           </View>
+
+          {/* ✅ agregado: fila de recuperación */}
+          <View style={styles.resetRow}>
+            <Text style={styles.forgotText}>¿Se te olvidó tu contraseña?</Text>
+            <Text style={styles.resetLink} onPress={handleResetPassword}>
+              Recuperar contraseña
+            </Text>
+          </View>
         </View>
 
         {/* Login Button */}
@@ -163,7 +200,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
   content: { flex: 1, paddingHorizontal: 36, paddingTop: 60 },
   header: { marginBottom: 40 },
-  title: { fontSize: 20, fontWeight: '600', color: '#000000', textAlign: 'left', marginBottom: 8 },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    textAlign: 'left',
+    marginBottom: 8,
+  },
   subtitle: { fontSize: 14, fontWeight: '600', color: '#595959', textAlign: 'left' },
   inputContainer: { marginBottom: 40 },
   inputRow: {
@@ -176,6 +219,25 @@ const styles = StyleSheet.create({
   },
   inputIcon: { marginRight: 12, width: 14, height: 14 },
   textInput: { flex: 1, fontSize: 16, color: '#000000', paddingVertical: 8 },
+
+  // ✅ estilos agregados:
+  resetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -10,
+  },
+  forgotText: {
+    fontSize: 13,
+    color: '#595959',
+    fontWeight: '500',
+  },
+  resetLink: {
+    marginLeft: 6,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#ff7f0a', // naranja
+  },
+
   loginButton: {
     backgroundColor: '#ff6b35',
     height: 50,

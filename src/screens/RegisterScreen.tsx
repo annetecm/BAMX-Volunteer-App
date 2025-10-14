@@ -1,11 +1,9 @@
 import { auth, db } from "../firebaseConfig";
 import React, { useState } from "react";
-import { 
-  createUserWithEmailAndPassword
-} from "firebase/auth";
+import { createUserWithEmailAndPassword,deleteUser} from "firebase/auth";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { doc, setDoc } from "firebase/firestore";
 import * as DocumentPicker from 'expo-document-picker';
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 import {
   View,
@@ -178,42 +176,31 @@ const RegisterScreen: React.FC = () => {
       }
 
       // Guardar datos en tabla Users
+      // ...dentro de saveUserData:
       await setDoc(doc(db, "users", uid), {
         id: uid,
         fullName: formData.fullName,
         email: formData.email,
         phone_number: null,
-        // No incluimos el campo password para mayor seguridad
-        role: "volunteer", // Rol por defecto para registros desde esta pantalla
-        state: "pendiente", // Estado inicial pendiente de aprobación (pendiente/aprobado)
-        createdAt: new Date(),
+        role: "volunteer",
+        state: "pendiente",
+        createdAt: serverTimestamp(),               // ✅
       });
 
-      // Guardar datos en tabla Volunteers
       await setDoc(doc(db, "volunteers", uid), {
         id_volunteer: uid,
         correo: formData.email,
         curp: formData.curp,
-        
-        // Documentos como base64
-        ine: ineBase64 ? {
-          data: ineBase64,
-          metadata: ineMetadata
-        } : null,
-        
+        ine: ineBase64 ? { data: ineBase64, metadata: ineMetadata } : null,
         emergency_phone: formData.emergencyContact,
         blood_type: formData.bloodType,
-        
-        medical_certificate: medicalBase64 ? {
-          data: medicalBase64,
-          metadata: medicalMetadata
-        } : null,
-        
-        total_accredited_hr: 0, // Inicializar en 0
-        week_accredited_hr: 0,  // Inicializar en 0
-        area: selectedArea, // Área seleccionada por el voluntario
-        createdAt: new Date(),
+        medical_certificate: medicalBase64 ? { data: medicalBase64, metadata: medicalMetadata } : null,
+        total_accredited_hr: 0,
+        week_accredited_hr: 0,
+        area: selectedArea,
+        createdAt: serverTimestamp(),               // ✅
       });
+
 
       console.log("Datos guardados exitosamente en ambas colecciones");
       setUploading(false);
@@ -234,6 +221,16 @@ const RegisterScreen: React.FC = () => {
       const userCredential = await createUserWithEmailAndPassword(
         auth, formData.email, formData.password
       );
+
+      try {
+      
+      await saveUserData(userCredential.user.uid);
+    } catch (firestoreErr: any) {
+    
+      try { await deleteUser(userCredential.user); } catch (_) { /* no-op */ }
+      throw new Error("No se pudieron guardar tus datos. Intenta de nuevo.");
+    }
+
       await saveUserData(userCredential.user.uid);
       Alert.alert("¡Gracias!", "Solicitud de egistro exitosa, te notificaremos cuando seas aprobado");
     } catch (error: any) {
