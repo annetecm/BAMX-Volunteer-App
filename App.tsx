@@ -27,6 +27,7 @@ export type RootStackParamList = {
   Settings: undefined;
   AdminTasks: undefined;  
   VolunteerAdmin: undefined;  
+  RegisterScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -35,29 +36,51 @@ function AuthGate() {
   const [init, setInit] = React.useState(true);
   const [user, setUser] = React.useState<User | null>(null);
 
-  React.useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
+React.useEffect(() => {
+  const unsub = onAuthStateChanged(auth, async (u) => {
+    setUser(u);
 
-      if (u) {
-        const ref = doc(db, 'users', u.uid);
-        const snap = await getDoc(ref);
-        if (!snap.exists()) {
-          await setDoc(ref, {
-            fullName: u.displayName ?? '',
-            email: u.email ?? null,
-            phone_number: u.phoneNumber ?? null,
-            role: 'volunteer',
-            state: 'pendiente',
-            createdAt: Date.now(),
-          });
-        }
+    try {
+      if (!u) { setInit(false); return; }
+
+      // 1) Detecta admin por UID o por email como ID (ajusta según tu BD)
+      let isAdmin = false;
+      const adminByUid = await getDoc(doc(db, 'admins', u.uid));
+      if (adminByUid.exists()) isAdmin = true;
+
+      if (!isAdmin && u.email) {
+        const adminByEmail = await getDoc(doc(db, 'admins', u.email.toLowerCase()));
+        if (adminByEmail.exists()) isAdmin = true;
       }
 
+      if (isAdmin) {
+        // Admin: no crear/editar nada en "users"
+        setInit(false);
+        return;
+      }
+
+      // 2) Usuarios NO admin: solo verifica que exista el doc (no lo crees aquí)
+      const ref = doc(db, 'users', u.uid);
+      const snap = await getDoc(ref);
+
+      // Si necesitas crear por primera vez, hazlo SOLO en el flujo de registro,
+      // no aquí. Aquí solo deja pasar o saca al usuario.
+      if (!snap.exists()) {
+        // Opcional: puedes desloguear y avisar
+        // await signOut(auth);
+        // Alert.alert('Cuenta no registrada', 'Contacta al administrador o regístrate.');
+      }
+    } catch (e) {
+      // si hay error, no hagas nada destructivo aquí
+      console.log(e);
+    } finally {
       setInit(false);
-    });
-    return unsub;
-  }, []);
+    }
+  });
+
+  return unsub;
+}, []);
+
 
   if (init) {
     return (
@@ -77,6 +100,9 @@ function AuthGate() {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="AdminTasks" component={AdminTasksScreen} />
             <Stack.Screen name="VolunteerAdmin" component={VolunteerAdmin} />
+            <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
+
+            
           </>
         ) : (
           <>

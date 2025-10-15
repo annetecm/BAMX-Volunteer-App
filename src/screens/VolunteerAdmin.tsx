@@ -13,6 +13,7 @@ type RootStackParamList = {
   Settings: undefined;
   AdminTasks: undefined;
   VolunteerAdmin: undefined;
+  RegisterScreen: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VolunteerAdmin'>;
@@ -33,11 +34,11 @@ export const VolunteerAdmin: React.FC = () => {
   };
 
   const handleAddVolunteer = () => {
-    console.log('Add volunteer pressed');
+    navigation.navigate('RegisterScreen');
   };
 
   const handleBackPress = () => {
-    // ✅ Regresar a AdminTasks
+ 
     navigation.navigate('AdminTasks');
   };
 

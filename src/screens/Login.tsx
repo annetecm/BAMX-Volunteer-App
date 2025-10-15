@@ -30,41 +30,54 @@ const Login: React.FC<Props> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
+  const unsub = onAuthStateChanged(auth, async (user) => {
+    if (!user) return;
 
-      try {
-        const ref = doc(db, 'users', user.uid);
-        const snap = await getDoc(ref);
-
-        if (!snap.exists()) {
-          await signOut(auth);
-          Alert.alert(
-            'No se puede iniciar sesión',
-            'Tu cuenta no está registrada en la base de datos. Contacta al administrador.'
-          );
+    try {
+      // Admin por UID
+      const adminUid = await getDoc(doc(db, 'admins', user.uid));
+      if (adminUid.exists()) {
+        navigation.replace('Main');
+        return;
+      }
+      // Admin por email como ID (si así guardas)
+      if (user.email) {
+        const adminEmail = await getDoc(doc(db, 'admins', user.email.toLowerCase()));
+        if (adminEmail.exists()) {
+          navigation.replace('Main');
           return;
         }
-
-        const userData = snap.data();
-
-        if (userData.state === 'aprobado') {
-          navigation.replace('Main');
-        } else if (userData.state === 'pendiente') {
-          await signOut(auth);
-          Alert.alert('Cuenta en revisión', 'Tu cuenta está pendiente de aprobación por el administrador.');
-        } else {
-          await signOut(auth);
-          Alert.alert('Acceso denegado', 'Tu cuenta no está habilitada. Contacta al administrador.');
-        }
-      } catch (e: any) {
-        await signOut(auth);
-        Alert.alert('Error', e?.message ?? 'No se pudo validar tu cuenta. Intenta de nuevo.');
       }
-    });
 
-    return unsub;
-  }, [navigation]);
+      // No admin → flujo normal en "users"
+      const ref = doc(db, 'users', user.uid);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        await signOut(auth);
+        Alert.alert('No se puede iniciar sesión', 'Tu cuenta no está registrada.');
+        return;
+      }
+
+      const userData = snap.data();
+      if (userData.state === 'aprobado') {
+        navigation.replace('Main');
+      } else if (userData.state === 'pendiente') {
+        await signOut(auth);
+        Alert.alert('Cuenta en revisión', 'Tu cuenta está pendiente de aprobación.');
+      } else {
+        await signOut(auth);
+        Alert.alert('Acceso denegado', 'Tu cuenta no está habilitada.');
+      }
+    } catch (e: any) {
+      await signOut(auth);
+      Alert.alert('Error', e?.message ?? 'Intenta de nuevo.');
+    }
+  });
+
+  return unsub;
+}, [navigation]);
+
 
   const handleLogin = async () => {
     try {
