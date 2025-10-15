@@ -1,11 +1,9 @@
 import { auth, db } from "../firebaseConfig";
 import React, { useState } from "react";
-import { 
-  createUserWithEmailAndPassword
-} from "firebase/auth";
+import { createUserWithEmailAndPassword, deleteUser } from "firebase/auth";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { doc, setDoc } from "firebase/firestore";
 import * as DocumentPicker from 'expo-document-picker';
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 import {
   View,
@@ -43,7 +41,6 @@ const areaOptions: AreaOption[] = [
 const RegisterScreen: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
     fullName: '',
     curp: '',
     emergencyContact: '',
@@ -56,7 +53,6 @@ const RegisterScreen: React.FC = () => {
   const [ineDocument, setIneDocument] = useState<DocumentFile | null>(null);
   const [medicalDocument, setMedicalDocument] = useState<DocumentFile | null>(null);
   const [uploading, setUploading] = useState(false);
-
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -128,7 +124,6 @@ const RegisterScreen: React.FC = () => {
     }
   };
 
-  
   // Función para guardar datos del usuario y del voluntario en tablas separadas
   const saveUserData = async (uid: string) => {
     try {
@@ -183,37 +178,24 @@ const RegisterScreen: React.FC = () => {
         fullName: formData.fullName,
         email: formData.email,
         phone_number: null,
-        // No incluimos el campo password para mayor seguridad
-        role: "volunteer", // Rol por defecto para registros desde esta pantalla
-        state: "pendiente", // Estado inicial pendiente de aprobación (pendiente/aprobado)
-        createdAt: new Date(),
+        role: "volunteer",
+        state: "pendiente",
+        createdAt: serverTimestamp(),               
       });
 
-      // Guardar datos en tabla Volunteers
       await setDoc(doc(db, "volunteers", uid), {
-        id_volunteer: uid,
-        correo: formData.email,
-        curp: formData.curp,
-        
-        // Documentos como base64
-        ine: ineBase64 ? {
-          data: ineBase64,
-          metadata: ineMetadata
-        } : null,
-        
-        emergency_phone: formData.emergencyContact,
-        blood_type: formData.bloodType,
-        
-        medical_certificate: medicalBase64 ? {
-          data: medicalBase64,
-          metadata: medicalMetadata
-        } : null,
-        
-        total_accredited_hr: 0, // Inicializar en 0
-        week_accredited_hr: 0,  // Inicializar en 0
-        area: selectedArea, // Área seleccionada por el voluntario
-        createdAt: new Date(),
-      });
+  id_volunteer: uid,
+  correo: formData.email,
+  curp: formData.curp,
+  ine: ineBase64 ? { data: ineBase64, metadata: ineMetadata } : null,
+  emergency_phone: formData.emergencyContact,
+  blood_type: formData.bloodType,
+  medical_certificate: medicalBase64 ? { data: medicalBase64, metadata: medicalMetadata } : null,
+  total_accredited_hr: 0,
+  week_accredited_hr: 0,
+  area: selectedArea,
+  createdAt: serverTimestamp(),
+});
 
       console.log("Datos guardados exitosamente en ambas colecciones");
       setUploading(false);
@@ -225,24 +207,40 @@ const RegisterScreen: React.FC = () => {
     }
   };
 
+  // Genera una contraseña segura y aleatoria para crear el usuario en Firebase
+  const generateRandomPassword = (): string => {
+    // 16+ chars mixing random + timestamp to ensure uniqueness
+    const rand = Math.random().toString(36).slice(2, 10);
+    const time = Date.now().toString(36).slice(-6);
+    return `${rand}${time}A!`;
+  };
+
   const handleRegister = async () => {
     try {
-      if (!formData.email || !formData.password) {
-        Alert.alert("Error", "Por favor ingresa correo y contraseña");
+      if (!formData.email) {
+        Alert.alert("Error", "Por favor ingresa correo");
         return;
       }
+
+      // Generamos una contraseña oculta para el usuario (el usuario no la ve ni la ingresa)
+      const generatedPassword = generateRandomPassword();
+
       const userCredential = await createUserWithEmailAndPassword(
-        auth, formData.email, formData.password
+        auth, formData.email, generatedPassword
       );
-      await saveUserData(userCredential.user.uid);
-      Alert.alert("¡Gracias!", "Solicitud de egistro exitosa, te notificaremos cuando seas aprobado");
+
+      try {
+        await saveUserData(userCredential.user.uid);
+      } catch (firestoreErr: any) {
+        try { await deleteUser(userCredential.user); } catch (_) { /* no-op */ }
+        throw new Error("No se pudieron guardar tus datos. Intenta de nuevo.");
+      }
+
     } catch (error: any) {
       console.error("Error en registro:", error.message);
       Alert.alert("Error", error.message);
     }
   };
-
-
 
   const renderAreaItem = ({ item }: { item: AreaOption }) => (
     <TouchableOpacity
@@ -259,11 +257,8 @@ const RegisterScreen: React.FC = () => {
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Regístrate</Text>
-            <Text style={styles.subtitle}>¡Únete como voluntario!</Text>
+            <Text style={styles.title}>Registro de voluntario</Text>
           </View>
-
-
 
           {/* Input Fields */}
           <View style={styles.inputContainer}>
@@ -282,23 +277,6 @@ const RegisterScreen: React.FC = () => {
                 onChangeText={(value) => handleInputChange('email', value)}
                 keyboardType="email-address"
                 autoCapitalize="none"
-              />
-            </View>
-
-            {/* Password Field */}
-            <View style={styles.inputRow}>
-              <Image 
-                source={require('../../assets/contrasenaIcon.png')} 
-                style={styles.inputIcon}
-                resizeMode="contain"
-              />
-              <TextInput
-                style={styles.textInput}
-                placeholder="Contraseña"
-                placeholderTextColor="#595959"
-                value={formData.password}
-                onChangeText={(value) => handleInputChange('password', value)}
-                secureTextEntry
               />
             </View>
 
@@ -466,12 +444,11 @@ const RegisterScreen: React.FC = () => {
         </View>
       </Modal>
 
-
     </SafeAreaView>
   );
 };
 
-// Styles
+// Styles (sin cambios respecto al original)
 const styles = StyleSheet.create({
   container: {
     flex: 1,

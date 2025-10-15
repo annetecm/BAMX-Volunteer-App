@@ -11,7 +11,12 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  sendPasswordResetEmail,
+} from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -29,33 +34,44 @@ const Login: React.FC<Props> = ({ navigation }) => {
     if (!user) return;
 
     try {
+      // Admin por UID
+      const adminUid = await getDoc(doc(db, 'admins', user.uid));
+      if (adminUid.exists()) {
+        navigation.replace('Main');
+        return;
+      }
+      // Admin por email como ID (si así guardas)
+      if (user.email) {
+        const adminEmail = await getDoc(doc(db, 'admins', user.email.toLowerCase()));
+        if (adminEmail.exists()) {
+          navigation.replace('Main');
+          return;
+        }
+      }
+
+      // No admin → flujo normal en "users"
       const ref = doc(db, 'users', user.uid);
       const snap = await getDoc(ref);
 
       if (!snap.exists()) {
         await signOut(auth);
-        Alert.alert(
-          'No se puede iniciar sesión',
-          'Tu cuenta no está registrada en la base de datos. Contacta al administrador.'
-        );
+        Alert.alert('No se puede iniciar sesión', 'Tu cuenta no está registrada.');
         return;
       }
 
       const userData = snap.data();
-
-      if (userData.state === "aprobado") {
+      if (userData.state === 'aprobado') {
         navigation.replace('Main');
-      } else if (userData.state === "pendiente") {
+      } else if (userData.state === 'pendiente') {
         await signOut(auth);
-        Alert.alert('Cuenta en revisión', 'Tu cuenta está pendiente de aprobación por el administrador.');
+        Alert.alert('Cuenta en revisión', 'Tu cuenta está pendiente de aprobación.');
       } else {
         await signOut(auth);
-        Alert.alert('Acceso denegado', 'Tu cuenta no está habilitada. Contacta al administrador.');
+        Alert.alert('Acceso denegado', 'Tu cuenta no está habilitada.');
       }
-
     } catch (e: any) {
       await signOut(auth);
-      Alert.alert('Error', e?.message ?? 'No se pudo validar tu cuenta. Intenta de nuevo.');
+      Alert.alert('Error', e?.message ?? 'Intenta de nuevo.');
     }
   });
 
@@ -79,10 +95,36 @@ const Login: React.FC<Props> = ({ navigation }) => {
       } else if (err?.code === 'auth/invalid-email') {
         Alert.alert('Correo inválido', 'Verifica el formato del correo.');
       } else {
-        Alert.alert('Error al iniciar sesión','Revisa tus credenciales.');
+        Alert.alert('Error al iniciar sesión', 'Revisa tus credenciales.');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      Alert.alert(
+        'Correo requerido',
+        'Escribe tu correo en el campo de “Correo” para enviarte el enlace de recuperación.'
+      );
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, trimmed);
+      Alert.alert(
+        'Revisa tu correo',
+        'Te enviamos un enlace para restablecer tu contraseña. Si no lo ves, revisa tu carpeta de spam.'
+      );
+    } catch (err: any) {
+      if (err?.code === 'auth/invalid-email') {
+        Alert.alert('Correo inválido', 'Verifica el formato del correo.');
+      } else if (err?.code === 'auth/user-not-found') {
+        Alert.alert('Usuario no encontrado', 'No existe una cuenta registrada con ese correo.');
+      } else {
+        Alert.alert('No se pudo enviar', 'Inténtalo de nuevo en unos minutos.');
+      }
     }
   };
 
@@ -132,6 +174,8 @@ const Login: React.FC<Props> = ({ navigation }) => {
               secureTextEntry
             />
           </View>
+
+          
         </View>
 
         {/* Login Button */}
@@ -145,15 +189,24 @@ const Login: React.FC<Props> = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            ¿No estás registrado?{' '}
-            <Text style={styles.createAccountText} onPress={handleCreateAccount}>
-              Crea una cuenta
-            </Text>
+       {/* Footer con enlaces juntos */}
+      <View style={styles.footer}>
+        <Text style={[styles.footerText]} numberOfLines={1}>
+          ¿Olvidaste tu contraseña?{' '}
+          <Text style={styles.linkText} onPress={handleResetPassword}>
+            Restablecer ahora
           </Text>
-        </View>
+        </Text>
+
+        <Text style={[styles.footerText, { marginTop: 12 }]}>
+          ¿No tienes cuenta?{' '}
+          <Text style={styles.linkText} onPress={handleCreateAccount}>
+            Crear una cuenta
+          </Text>
+        </Text>
+      </View>
+
+
       </View>
     </SafeAreaView>
   );
@@ -163,7 +216,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
   content: { flex: 1, paddingHorizontal: 36, paddingTop: 60 },
   header: { marginBottom: 40 },
-  title: { fontSize: 20, fontWeight: '600', color: '#000000', textAlign: 'left', marginBottom: 8 },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    textAlign: 'left',
+    marginBottom: 8,
+  },
   subtitle: { fontSize: 14, fontWeight: '600', color: '#595959', textAlign: 'left' },
   inputContainer: { marginBottom: 40 },
   inputRow: {
@@ -176,6 +235,26 @@ const styles = StyleSheet.create({
   },
   inputIcon: { marginRight: 12, width: 14, height: 14 },
   textInput: { flex: 1, fontSize: 16, color: '#000000', paddingVertical: 8 },
+
+  // ✅ estilos agregados:
+  resetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -10,
+  },
+
+  forgotText: {
+    fontSize: 13,
+    color: '#595959',
+    fontWeight: '500',
+  },
+  resetLink: {
+    marginLeft: 6,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#ff7f0a', // naranja
+  },
+
   loginButton: {
     backgroundColor: '#ff6b35',
     height: 50,
@@ -185,8 +264,22 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   loginButtonText: { fontSize: 16, fontWeight: '600', color: '#ffffff' },
-  footer: { alignItems: 'center', marginTop: 20 },
-  footerText: { fontSize: 14, fontWeight: '600', color: '#979797', textAlign: 'center' },
+  footer: {
+  alignItems: 'center',
+  marginTop: 25,
+  },
+  footerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#979797',
+    textAlign: 'center',
+  },
+  linkText: {
+    color: '#ff7f0a',
+    fontWeight: '700',
+  },
+
+
   createAccountText: { color: '#ff7f0a' },
 });
 
