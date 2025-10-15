@@ -20,14 +20,17 @@ import { auth, db } from './src/firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export type RootStackParamList = {
+  Onboarding: undefined;
   Login: undefined;
   Main: undefined;
   Register: undefined;
   AddTask: undefined;
   Settings: undefined;
+
   AdminTasks: undefined;  
   VolunteerAdmin: undefined;  
   RegisterScreen: undefined;
+
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -106,6 +109,7 @@ React.useEffect(() => {
           </>
         ) : (
           <>
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Login" component={Login} />
             <Stack.Screen name="Register" component={RegisterAdmin} />
           </>
