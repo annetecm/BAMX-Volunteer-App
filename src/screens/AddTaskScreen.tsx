@@ -1,9 +1,25 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, SafeAreaView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { addTaskStyles } from '../styles/AddTaskStyles';
+import * as Yup from 'yup';
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, onSnapshot, addDoc } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: process.env.EXPO_PUBLIC_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_APP_ID
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 
 interface Volunteer {
   id: string;
@@ -21,11 +37,37 @@ type RootStackParamList = {
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddTask'>;
 
+const taskSchema = Yup.object().shape({
+  name: Yup.string()
+    .trim()
+    .min(5, 'El nombre de la tarea es demasiado corto')
+    .max(50, 'El nombre de la tarea es demasiado largo'),
+  description: Yup.string()
+    .trim()
+    .min(20, 'La descripción debe tener al menos 20 caracteres')
+    .max(150, 'La descripción es demasiado larga'),
+  neededAssistants: Yup.number()
+    .required('Debes indicar la cantidad de voluntarios necesarios')
+    .min(1, 'Debe ser al menos 1')
+});
+
+// Función para sanitizar texto
+function sanitizeText(text: string, maxLen = 150) {
+  if (!text) return '';
+  const normalized = text.normalize ? text.normalize('NFC') : text;
+  return normalized.replace(/[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñÜü\s\.,()]/g, '').trim().slice(0, maxLen);
+}
+
 export const AddTaskScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [activeTab, setActiveTab] = useState('tasks');
+
   const [taskName, setTaskName] = useState('');
-  const [timeInterval, setTimeInterval] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
+  const [neededAssistants, setNeededAssistants] = useState('');
+  const [selectedCount, setSelectedCount] = useState(0);
+
+
   const [volunteers, setVolunteers] = useState<Volunteer[]>([
     { id: '1', name: 'Miguel Mendoza', selected: false },
     { id: '2', name: 'Flor Gutiérrez', selected: false },
@@ -33,30 +75,62 @@ export const AddTaskScreen: React.FC = () => {
     { id: '4', name: 'Anett Zepeda', selected: false },
   ]);
 
+  
+
   const toggleVolunteer = (volunteerId: string) => {
     setVolunteers(prev =>
       prev.map(v => (v.id === volunteerId ? { ...v, selected: !v.selected } : v))
     );
   };
 
-  const handleCreateTask = () => {
-    if (!taskName.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un nombre para la tarea');
+ const handleCreateTask = async () => {
+    const safeName = sanitizeText(taskName, 50);
+    const safeDescription = sanitizeText(taskDescription, 150);
+    const safeAssistants = Number(neededAssistants);
+
+    try {
+      await taskSchema.validate({
+        name: safeName,
+        description: safeDescription,
+        neededAssistants: safeAssistants,
+      }, { abortEarly: false });
+    } catch (err: any) {
+      const msg = err.errors ? err.errors.join('\n') : err.message;
+      Alert.alert('Errores en el formulario', msg);
       return;
     }
-    if (!timeInterval.trim()) {
-      Alert.alert('Error', 'Por favor ingresa el intervalo de tiempo');
-      return;
-    }
-    
+
     const selectedVolunteers = volunteers.filter(v => v.selected);
     if (selectedVolunteers.length === 0) {
       Alert.alert('Error', 'Por favor selecciona al menos un voluntario');
       return;
     }
 
-    Alert.alert('Éxito', 'Tarea creada correctamente');
-    navigation.navigate('Main');
+    try {
+      const tasksCollection = collection(db, 'tasks');
+      const newTask = {
+        type: safeName,
+        description: safeDescription,
+        neededAssistants: safeAssistants,
+        deadline: null,
+        completed: false,
+      };
+
+      const docRef = await addDoc(tasksCollection, newTask);
+
+      console.log('Tarea creada con ID: ', docRef.id);
+      Alert.alert('Éxito', 'La tarea fue creada correctamente');
+
+      setTaskName('');
+      setTaskDescription('');
+      setNeededAssistants('');
+      setVolunteers(prev => prev.map(v => ({ ...v, selected: false })));
+
+      navigation.navigate('Main');
+    } catch (error: any) {
+      console.log(error);
+      Alert.alert('Error', 'No se pudo crear la tarea: ' + error.message);
+    }
   };
 
   return (
@@ -69,32 +143,45 @@ export const AddTaskScreen: React.FC = () => {
         <Text style={addTaskStyles.mainTitle}>Nueva Tarea</Text>
 
         <View style={addTaskStyles.orangeContainer}>
+          {/* Nombre de tarea */}
           <View style={addTaskStyles.inputRow}>
-            <Text style={addTaskStyles.inputIcon}>📋</Text>
             <TextInput
               style={addTaskStyles.input}
-              placeholder="Nombre"
+              placeholder="Nombre de la tarea"
               placeholderTextColor="rgba(255, 255, 255, 0.7)"
               value={taskName}
               onChangeText={setTaskName}
             />
           </View>
 
+          {/* Descripción */}
+          <View style={[addTaskStyles.inputRow, { height: 80 }]}>
+            <TextInput
+              style={[addTaskStyles.input, { height: 80 }]}
+              placeholder="Descripción de la tarea"
+              placeholderTextColor="rgba(255, 255, 255, 0.7)"
+              multiline
+              value={taskDescription}
+              onChangeText={setTaskDescription}
+            />
+          </View>
+
+          {/* Needed assistants */}
           <View style={addTaskStyles.inputRow}>
-            <Text style={addTaskStyles.inputIcon}>⏰</Text>
             <TextInput
               style={addTaskStyles.input}
-              placeholder="Intervalo de tiempo para finalización"
+              placeholder="Voluntarios necesarios"
               placeholderTextColor="rgba(255, 255, 255, 0.7)"
-              value={timeInterval}
-              onChangeText={setTimeInterval}
+              keyboardType="numeric"
+              value={neededAssistants}
+              onChangeText={setNeededAssistants}
             />
           </View>
         </View>
 
+        {/* Voluntarios */}
         <View style={addTaskStyles.volunteersContainer}>
           <Text style={addTaskStyles.volunteersTitle}>Voluntarios participantes:</Text>
-
           {volunteers.map(volunteer => (
             <TouchableOpacity 
               key={volunteer.id} 
@@ -102,7 +189,10 @@ export const AddTaskScreen: React.FC = () => {
                 addTaskStyles.volunteerCard,
                 volunteer.selected && addTaskStyles.volunteerCardSelected
               ]}
-              onPress={() => toggleVolunteer(volunteer.id)}
+              onPress={() => 
+                toggleVolunteer(volunteer.id)
+                
+              }
             >
               <View style={addTaskStyles.avatar}>
                 <Text style={addTaskStyles.avatarText}>
@@ -119,6 +209,7 @@ export const AddTaskScreen: React.FC = () => {
           ))}
         </View>
 
+        {/* Botón crear tarea */}
         <TouchableOpacity 
           style={addTaskStyles.createButton}
           onPress={handleCreateTask}
@@ -127,19 +218,15 @@ export const AddTaskScreen: React.FC = () => {
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Bottom navigation */}
       <BottomNavigation
         activeTab={activeTab}
         onTabPress={(tab) => {
-          if (tab === 'settings') {
-            navigation.navigate('Settings');
-          } else if (tab === 'menu') {
-            navigation.navigate('Main');
-          }
+          if (tab === 'settings') navigation.navigate('Settings');
+          else if (tab === 'menu') navigation.navigate('Main');
           setActiveTab(tab);
         }}
-        onNavigateToAddTask={() => {
-          console.log('Ya estás en AddTask');
-        }}
+        onNavigateToAddTask={() => console.log('Ya estás en AddTask')}
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')} 
       />
     </SafeAreaView>

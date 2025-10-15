@@ -31,6 +31,15 @@ export const addTaskStyles = StyleSheet.create({
     paddingBottom: 40,
     marginHorizontal: 0,
   },
+    orangeContainer2: {
+    backgroundColor: '#FF9B63',
+    
+    paddingHorizontal: 40,
+    paddingTop: 205,
+    paddingBottom: 310,
+    marginHorizontal: 0,
+    flex: 1
+  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',

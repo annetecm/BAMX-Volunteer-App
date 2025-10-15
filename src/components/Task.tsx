@@ -5,9 +5,12 @@ import { taskStyles } from '../styles/TaskStyles';
 export interface Task {
   id: string;
   title: string;
+  type: string;         
+  description: string;
   deadline: string;
   completed: boolean;
   assistants?: number;
+  neededAssistants: number;
 }
 
 export interface Volunteer {
