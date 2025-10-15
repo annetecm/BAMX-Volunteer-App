@@ -145,12 +145,12 @@ export const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, showAssistan
 // Admin Task Item Component
 interface AdminTaskItemProps {
   task: Task;
-  onPress: () => void;
+  onArrowPress: () => void;
 }
 
-export const AdminTaskItem: React.FC<AdminTaskItemProps> = ({ task, onPress }) => {
+export const AdminTaskItem: React.FC<AdminTaskItemProps> = ({ task, onArrowPress }) => {
   return (
-    <TouchableOpacity style={taskStyles.adminTaskItem} onPress={onPress}>
+    <View style={taskStyles.adminTaskItem}>
       <View style={taskStyles.adminTaskIcon}>
         <Text style={taskStyles.adminTaskIconText}>∑</Text>
       </View>
@@ -160,10 +160,10 @@ export const AdminTaskItem: React.FC<AdminTaskItemProps> = ({ task, onPress }) =
           <Text style={taskStyles.adminTaskAssistants}>({task.assistants}/4) asistencias</Text>
         )}
       </View>
-      <TouchableOpacity style={taskStyles.adminTaskAction}>
+      <TouchableOpacity style={taskStyles.adminTaskAction} onPress={onArrowPress}>
         <Text style={taskStyles.adminActionIcon}>→</Text>
       </TouchableOpacity>
-    </TouchableOpacity>
+    </View>
   );
 };
 
