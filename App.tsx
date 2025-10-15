@@ -14,26 +14,27 @@ import { AdminTasksScreen } from './src/screens/AdminTasksScreen';
 import { AddTaskScreen } from './src/screens/AddTaskScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import RegisterAdmin from './src/screens/RegisterAdmin'; 
+import { TaskDetailsScreen } from './src/screens/TaskDetailsScreen';
 
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from './src/firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export type RootStackParamList = {
-  Onboarding: undefined;
+  Onboarding: undefined;  
   Login: undefined;
   Main: undefined;
   Register: undefined;
   AddTask: undefined;
   Settings: undefined;
-
   AdminTasks: undefined;  
   VolunteerAdmin: undefined;  
   RegisterScreen: undefined;
-
+  TaskDetails: { task: any };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
 
 function AuthGate() {
   const [init, setInit] = React.useState(true);
@@ -118,6 +119,8 @@ React.useEffect(() => {
     </NavigationContainer>
   );
 }
+
+
 
 export default function App() {
   return <AuthGate />;
