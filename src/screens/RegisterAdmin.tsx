@@ -35,6 +35,17 @@ const RegisterAdmin: React.FC = () => {
     Alert.alert("Error", "Por favor completa todos los campos");
     return;
   }
+
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+  if (!passwordRegex.test(formData.password)) {
+    Alert.alert(
+      "Contraseña no válida",
+      "La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula, un número y un carácter especial."
+    );
+    return;
+  }
+
   if (!acceptedTerms) {
     Alert.alert("Error", "Debes aceptar los términos y condiciones");
     return;
@@ -43,7 +54,6 @@ const RegisterAdmin: React.FC = () => {
   try {
     setLoading(true);
 
-    // 1) Crear usuario en Authentication
     const cred = await createUserWithEmailAndPassword(
       auth,
       formData.email.trim(),
@@ -51,18 +61,16 @@ const RegisterAdmin: React.FC = () => {
     );
     const u = cred.user;
 
-    // 2) Payload (SIN contraseña) — el mismo para ambas colecciones
     const userData = {
       id: u.uid,
       fullName: formData.fullName,
       email: formData.email.trim(),
       phone_number: null,
-      role: "supervisor",          // o el rol que tú definas por defecto
-      state: "pendiente",          // si manejas aprobación
-      createdAt: serverTimestamp() // timestamp de Firestore
+      role: "supervisor",       
+      state: "pendiente",       
+      createdAt: serverTimestamp() 
     };
 
-    // 3) Escritura atómica a users y supervisors
     const batch = writeBatch(db);
     batch.set(doc(db, "users", u.uid), userData);
     batch.set(doc(db, "supervisors", u.uid), userData);
