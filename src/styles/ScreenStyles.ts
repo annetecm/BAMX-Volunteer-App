@@ -132,4 +132,21 @@ export const screenStyles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+
+  input: {
+    backgroundColor: '#ffffff',
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#cccccc',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+
 });
