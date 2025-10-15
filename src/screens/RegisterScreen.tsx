@@ -184,18 +184,18 @@ const RegisterScreen: React.FC = () => {
       });
 
       await setDoc(doc(db, "volunteers", uid), {
-        id_volunteer: uid,
-        correo: formData.email,
-        curp: formData.curp,
-        ine: ineBase64 ? { data: ineBase64, metadata: ineMetadata } : null,
-        emergency_phone: formData.emergencyContact,
-        blood_type: formData.bloodType,
-        medical_certificate: medicalBase64 ? { data: medicalBase64, metadata: medicalMetadata } : null,
-        total_accredited_hr: 0,
-        week_accredited_hr: 0,
-        area: selectedArea,
-        createdAt: serverTimestamp(),          
-      });
+  id_volunteer: uid,
+  correo: formData.email,
+  curp: formData.curp,
+  ine: ineBase64 ? { data: ineBase64, metadata: ineMetadata } : null,
+  emergency_phone: formData.emergencyContact,
+  blood_type: formData.bloodType,
+  medical_certificate: medicalBase64 ? { data: medicalBase64, metadata: medicalMetadata } : null,
+  total_accredited_hr: 0,
+  week_accredited_hr: 0,
+  area: selectedArea,
+  createdAt: serverTimestamp(),
+});
 
       console.log("Datos guardados exitosamente en ambas colecciones");
       setUploading(false);
