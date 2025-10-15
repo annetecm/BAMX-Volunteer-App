@@ -13,6 +13,7 @@ import { VolunteerAdmin } from './src/screens/VolunteerAdmin';
 import { AdminTasksScreen } from './src/screens/AdminTasksScreen';
 import { AddTaskScreen } from './src/screens/AddTaskScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import RegisterAdmin from './src/screens/RegisterAdmin'; 
 
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from './src/firebaseConfig';
@@ -24,8 +25,8 @@ export type RootStackParamList = {
   Register: undefined;
   AddTask: undefined;
   Settings: undefined;
-  AdminTasks: undefined;  // ✅ Nueva ruta
-  VolunteerAdmin: undefined;  // ✅ Nueva ruta
+  AdminTasks: undefined;  
+  VolunteerAdmin: undefined;  
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -80,7 +81,7 @@ function AuthGate() {
         ) : (
           <>
             <Stack.Screen name="Login" component={Login} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="Register" component={RegisterAdmin} />
           </>
         )}
       </Stack.Navigator>

@@ -162,13 +162,7 @@ const Login: React.FC<Props> = ({ navigation }) => {
             />
           </View>
 
-          {/* ✅ agregado: fila de recuperación */}
-          <View style={styles.resetRow}>
-            <Text style={styles.forgotText}>¿Se te olvidó tu contraseña?</Text>
-            <Text style={styles.resetLink} onPress={handleResetPassword}>
-              Recuperar contraseña
-            </Text>
-          </View>
+          
         </View>
 
         {/* Login Button */}
@@ -182,15 +176,24 @@ const Login: React.FC<Props> = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            ¿No estás registrado?{' '}
-            <Text style={styles.createAccountText} onPress={handleCreateAccount}>
-              Crea una cuenta
-            </Text>
+       {/* Footer con enlaces juntos */}
+      <View style={styles.footer}>
+        <Text style={[styles.footerText]} numberOfLines={1}>
+          ¿Olvidaste tu contraseña?{' '}
+          <Text style={styles.linkText} onPress={handleResetPassword}>
+            Restablecer ahora
           </Text>
-        </View>
+        </Text>
+
+        <Text style={[styles.footerText, { marginTop: 12 }]}>
+          ¿No tienes cuenta?{' '}
+          <Text style={styles.linkText} onPress={handleCreateAccount}>
+            Crear una cuenta
+          </Text>
+        </Text>
+      </View>
+
+
       </View>
     </SafeAreaView>
   );
@@ -226,6 +229,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: -10,
   },
+
   forgotText: {
     fontSize: 13,
     color: '#595959',
@@ -247,8 +251,22 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   loginButtonText: { fontSize: 16, fontWeight: '600', color: '#ffffff' },
-  footer: { alignItems: 'center', marginTop: 20 },
-  footerText: { fontSize: 14, fontWeight: '600', color: '#979797', textAlign: 'center' },
+  footer: {
+  alignItems: 'center',
+  marginTop: 25,
+  },
+  footerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#979797',
+    textAlign: 'center',
+  },
+  linkText: {
+    color: '#ff7f0a',
+    fontWeight: '700',
+  },
+
+
   createAccountText: { color: '#ff7f0a' },
 });
 
