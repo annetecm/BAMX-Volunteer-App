@@ -63,7 +63,7 @@ export const AdminTasksScreen: React.FC = () => {
               <AdminTaskItem 
                 key={task.id}
                 task={task}
-                onPress={() => handleTaskPress(task.id)}
+                onArrowPress={() => handleTaskPress(task.id)}
               />
             ))}
           </ScrollView>

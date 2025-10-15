@@ -232,7 +232,7 @@ const RegisterScreen: React.FC = () => {
     }
 
       await saveUserData(userCredential.user.uid);
-      Alert.alert("¡Gracias!", "Solicitud de egistro exitosa, te notificaremos cuando seas aprobado");
+      Alert.alert("¡Gracias!", "Solicitud de Registro exitosa, te notificaremos cuando seas aprobado");
     } catch (error: any) {
       console.error("Error en registro:", error.message);
       Alert.alert("Error", error.message);
