@@ -97,28 +97,6 @@ export const AdminTasksScreen: React.FC = () => {
               </TouchableOpacity>
             ))}
           </ScrollView>
-
-          
-      {/* Botón flotante siempre visible */}
-          <TouchableOpacity
-            style={{
-              position: 'absolute',
-              bottom: 80,
-              right: 20,
-              backgroundColor: '#FF9B63',
-              paddingVertical: 16,
-              paddingHorizontal: 24,
-              borderRadius: 50,
-              elevation: 5,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 5,
-            }}
-            onPress={() => navigation.navigate('AddTask')}
-          >
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>+ Agregar Tarea</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
