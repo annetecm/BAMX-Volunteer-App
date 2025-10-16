@@ -10,8 +10,8 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { collection, doc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
 
 const RegisterAdmin: React.FC = () => {
@@ -31,60 +31,71 @@ const RegisterAdmin: React.FC = () => {
   };
 
   const handleRegister = async () => {
-  if (!formData.email || !formData.password || !formData.fullName) {
-    Alert.alert("Error", "Por favor completa todos los campos");
-    return;
-  }
+    if (!formData.email || !formData.password || !formData.fullName) {
+      Alert.alert("Error", "Por favor completa todos los campos");
+      return;
+    }
 
-  const passwordRegex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
-  if (!passwordRegex.test(formData.password)) {
-    Alert.alert(
-      "Contraseña no válida",
-      "La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula, un número y un carácter especial."
-    );
-    return;
-  }
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      Alert.alert(
+        "Contraseña no válida",
+        "La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula, un número y un carácter especial."
+      );
+      return;
+    }
 
-  if (!acceptedTerms) {
-    Alert.alert("Error", "Debes aceptar los términos y condiciones");
-    return;
-  }
+    if (!acceptedTerms) {
+      Alert.alert("Error", "Debes aceptar los términos y condiciones");
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const cred = await createUserWithEmailAndPassword(
-      auth,
-      formData.email.trim(),
-      formData.password
-    );
-    const u = cred.user;
+      // 🔹 Crear usuario en Firebase Auth
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        formData.email.trim(),
+        formData.password
+      );
+      const u = cred.user;
 
-    const userData = {
-      id: u.uid,
-      fullName: formData.fullName,
-      email: formData.email.trim(),
-      phone_number: null,
-      role: "supervisor",       
-      state: "pendiente",       
-      createdAt: serverTimestamp() 
-    };
+ 
+      const userData = {
+        id: u.uid,
+        fullName: formData.fullName,
+        email: formData.email.trim(),
+        phone_number: null,
+        role: "supervisor",
+        state: "pendiente", 
+        createdAt: serverTimestamp(),
+      };
 
-    const batch = writeBatch(db);
-    batch.set(doc(db, "users", u.uid), userData);
-    batch.set(doc(db, "supervisors", u.uid), userData);
-    await batch.commit();
+      const batch = writeBatch(db);
+      batch.set(doc(db, "users", u.uid), userData);
+      batch.set(doc(db, "supervisors", u.uid), userData);
+      await batch.commit();
 
-    setLoading(false);
-    setFormData({ email: "", password: "", fullName: "" });
-    setAcceptedTerms(false);
-  } catch (e: any) {
-    setLoading(false);
-    console.error(e);
-    Alert.alert("Error", e?.message ?? "No se pudo registrar el usuario");
-  }
-};
+  
+      await signOut(auth);
+
+      setLoading(false);
+      setFormData({ email: "", password: "", fullName: "" });
+      setAcceptedTerms(false);
+
+ 
+      Alert.alert(
+        "Registro exitoso",
+        "Tu cuenta fue creada correctamente. Un administrador revisará tu solicitud y te notificará cuando esté aprobada."
+      );
+    } catch (e: any) {
+      setLoading(false);
+      console.error(e);
+      Alert.alert("Error", e?.message ?? "No se pudo registrar el usuario");
+    }
+  };
 
 
   return (
