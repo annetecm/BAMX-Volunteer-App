@@ -17,6 +17,7 @@ type RootStackParamList = {
   Settings: undefined;
   AdminTasks: undefined; // ✅ Agregada
   VolunteerAdmin: undefined; // ✅ Agregada
+  VolunteerParticipation: { volunteerName: string };
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Main'>;
@@ -26,7 +27,7 @@ export const MainScreen: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'asistieron' | 'no-asistieron'>('asistieron');
   const [activeTab, setActiveTab] = useState('home');
   const [volunteers, setVolunteers] = useState<Volunteer[]>([
-    { id: '1', name: 'Juan Pérez', attended: true },
+    { id: '1', name: 'Luciano Luna', attended: true },
     { id: '2', name: 'María González', attended: true },
     { id: '3', name: 'Carlos Rodríguez', attended: false },
     { id: '4', name: 'Ana Martínez', attended: true },
@@ -120,7 +121,7 @@ export const MainScreen: React.FC = () => {
               <VolunteerItem 
                 key={volunteer.id} 
                 volunteer={volunteer} 
-                onPress={() => handleVolunteerPress(volunteer.id)} 
+                onPress={() => navigation.navigate('VolunteerParticipation', { volunteerName: volunteer.name })} 
               />
             ))}
           </View>
