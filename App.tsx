@@ -103,7 +103,7 @@ React.useEffect(() => {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="AdminTasks" component={AdminTasksScreen} />
             <Stack.Screen name="VolunteerAdmin" component={VolunteerAdmin} />
-            <Stack.Screen name="VolunteerAdmin" component={VolunteerManager} />
+            <Stack.Screen name="VolunteerManager" component={VolunteerManager} />
             <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
             <Stack.Screen name="TaskDetails" component={TaskDetailsScreen} />
 
