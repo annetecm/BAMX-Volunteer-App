@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, ScrollView, SafeAreaView, TouchableOpacity, Alert, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { addTaskStyles } from '../styles/AddTaskStyles';
 import * as Yup from 'yup';
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, onSnapshot, addDoc } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_API_KEY,
@@ -20,7 +20,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-
 interface Volunteer {
   id: string;
   name: string;
@@ -31,8 +30,11 @@ type RootStackParamList = {
   Main: undefined;
   AddTask: undefined;
   Settings: undefined;
-  AdminTasks: undefined; 
+  AdminTasks: undefined;
   VolunteerAdmin: undefined;
+  VolunteerManager: undefined;
+  RegisterScreen: undefined;
+  VolunteerDetails: { volunteer: any };
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddTask'>;
@@ -65,25 +67,44 @@ export const AddTaskScreen: React.FC = () => {
   const [taskName, setTaskName] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
   const [neededAssistants, setNeededAssistants] = useState('');
-  const [selectedCount, setSelectedCount] = useState(0);
+  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
 
+  useEffect(() => {
+    const volunteerRef = collection(db, 'volunteers');
+    const unsubscribe = onSnapshot(volunteerRef, (querySnapshot) => {
+      const dataArray: Volunteer[] = querySnapshot.docs
+        .map((doc) => {
+          const data = doc.data() as any;
+          return { 
+            id: doc.id, 
+            name: data.fullName || 'Sin nombre',
+            selected: data.selected ?? false 
+          };
+        })
+        .filter(v => !v.selected); 
+      setVolunteers(dataArray);
+    });
+    return () => unsubscribe();
+  }, []);
 
-  const [volunteers, setVolunteers] = useState<Volunteer[]>([
-    { id: '1', name: 'Miguel Mendoza', selected: false },
-    { id: '2', name: 'Flor Gutiérrez', selected: false },
-    { id: '3', name: 'Daniel Wynter', selected: false },
-    { id: '4', name: 'Anett Zepeda', selected: false },
-  ]);
-
-  
+  const selectedCount = volunteers.filter(v => v.selected).length;
 
   const toggleVolunteer = (volunteerId: string) => {
     setVolunteers(prev =>
-      prev.map(v => (v.id === volunteerId ? { ...v, selected: !v.selected } : v))
+      prev.map(v => {
+        if (v.id === volunteerId) {
+          if (!v.selected && selectedCount >= Number(neededAssistants || 0)) {
+            Alert.alert('Límite alcanzado', 'No puedes seleccionar más voluntarios que los necesarios.');
+            return v;
+          }
+          return { ...v, selected: !v.selected };
+        }
+        return v;
+      })
     );
   };
 
- const handleCreateTask = async () => {
+  const handleCreateTask = async () => {
     const safeName = sanitizeText(taskName, 50);
     const safeDescription = sanitizeText(taskDescription, 150);
     const safeAssistants = Number(neededAssistants);
@@ -114,9 +135,15 @@ export const AddTaskScreen: React.FC = () => {
         neededAssistants: safeAssistants,
         deadline: null,
         completed: false,
+        volunteers: selectedVolunteers.map(v => v.id)
       };
 
       const docRef = await addDoc(tasksCollection, newTask);
+
+      for (const volunteer of selectedVolunteers) {
+        const volunteerRef = doc(db, 'volunteers', volunteer.id);
+        await updateDoc(volunteerRef, { selected: true });
+      }
 
       console.log('Tarea creada con ID: ', docRef.id);
       Alert.alert('Éxito', 'La tarea fue creada correctamente');
@@ -143,7 +170,6 @@ export const AddTaskScreen: React.FC = () => {
         <Text style={addTaskStyles.mainTitle}>Nueva Tarea</Text>
 
         <View style={addTaskStyles.orangeContainer}>
-          {/* Nombre de tarea */}
           <View style={addTaskStyles.inputRow}>
             <TextInput
               style={addTaskStyles.input}
@@ -154,7 +180,6 @@ export const AddTaskScreen: React.FC = () => {
             />
           </View>
 
-          {/* Descripción */}
           <View style={[addTaskStyles.inputRow, { height: 80 }]}>
             <TextInput
               style={[addTaskStyles.input, { height: 80 }]}
@@ -166,7 +191,6 @@ export const AddTaskScreen: React.FC = () => {
             />
           </View>
 
-          {/* Needed assistants */}
           <View style={addTaskStyles.inputRow}>
             <TextInput
               style={addTaskStyles.input}
@@ -179,37 +203,41 @@ export const AddTaskScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Voluntarios */}
+        <Text style={addTaskStyles.volunteersTitle}>
+          Voluntarios disponibles ({selectedCount}/{neededAssistants || 0})
+        </Text>
+
         <View style={addTaskStyles.volunteersContainer}>
-          <Text style={addTaskStyles.volunteersTitle}>Voluntarios participantes:</Text>
-          {volunteers.map(volunteer => (
-            <TouchableOpacity 
-              key={volunteer.id} 
-              style={[
-                addTaskStyles.volunteerCard,
-                volunteer.selected && addTaskStyles.volunteerCardSelected
-              ]}
-              onPress={() => 
-                toggleVolunteer(volunteer.id)
-                
-              }
-            >
-              <View style={addTaskStyles.avatar}>
-                <Text style={addTaskStyles.avatarText}>
-                  {volunteer.name.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <Text style={addTaskStyles.volunteerName}>{volunteer.name}</Text>
-              <View style={addTaskStyles.plusButton}>
-                <Text style={addTaskStyles.plusText}>
-                  {volunteer.selected ? '−' : '+'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+          {volunteers.length === 0 ? (
+            <Text style={{ color: '#777', textAlign: 'center' }}>
+              No hay voluntarios disponibles.
+            </Text>
+          ) : (
+            volunteers.map(volunteer => (
+              <TouchableOpacity 
+                key={volunteer.id} 
+                style={[
+                  addTaskStyles.volunteerCard,
+                  volunteer.selected && addTaskStyles.volunteerCardSelected
+                ]}
+                onPress={() => toggleVolunteer(volunteer.id)}
+              >
+                <View style={addTaskStyles.avatar}>
+                  <Text style={addTaskStyles.avatarText}>
+                    {volunteer.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <Text style={addTaskStyles.volunteerName}>{volunteer.name}</Text>
+                <View style={addTaskStyles.plusButton}>
+                  <Text style={addTaskStyles.plusText}>
+                    {volunteer.selected ? '−' : '+'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
-        {/* Botón crear tarea */}
         <TouchableOpacity 
           style={addTaskStyles.createButton}
           onPress={handleCreateTask}
@@ -218,7 +246,6 @@ export const AddTaskScreen: React.FC = () => {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Bottom navigation */}
       <BottomNavigation
         activeTab={activeTab}
         onTabPress={(tab) => {
