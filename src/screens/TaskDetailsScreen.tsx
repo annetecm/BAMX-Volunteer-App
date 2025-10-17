@@ -7,7 +7,7 @@ import { db } from "../firebaseConfig";
 import { RootStackParamList } from "../../App";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Platform } from "react-native";
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from "@expo/vector-icons";
 import { styles } from "../styles/TaskDetailsScreen";
 
 type TaskDetailsRouteProp = RouteProp<RootStackParamList, "TaskDetails">;
@@ -80,7 +80,8 @@ export const TaskDetailsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+  <View style={{ flex: 1, backgroundColor: "#ff9b63" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#ff9b63" }}>
       <View style={styles.view}>
         {/* Header naranja */}
         <View style={styles.headerBackground} />
@@ -95,11 +96,13 @@ export const TaskDetailsScreen: React.FC = () => {
         {/* Título principal */}
         <Text style={styles.mainTitle}>Detalles de la tarea</Text>
 
+        <View style={{ position: "absolute", top: 140, left: 0, right: 0, bottom: 0, backgroundColor: "#ebfff4" }} />
         {/* Contenedor verde con bordes redondeados */}
         <View style={styles.greenContainer}>
-          <ScrollView 
+          <ScrollView
             style={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 120 }} // evita solapamiento con botones
           >
             {/* Card 1 - Tipo */}
             <View style={styles.card}>
@@ -207,19 +210,18 @@ export const TaskDetailsScreen: React.FC = () => {
           </ScrollView>
         </View>
 
-        {/* Botón de completar */}
+        {/* Botones flotantes */}
         <TouchableOpacity
           style={[styles.fabButton, styles.completeButton]}
           onPress={handleToggleComplete}
         >
-          <MaterialIcons 
-            name={isCompleted ? "check-circle" : "check"} 
-            size={28} 
-            color="#fff" 
+          <MaterialIcons
+            name={isCompleted ? "check-circle" : "check"}
+            size={28}
+            color="#fff"
           />
         </TouchableOpacity>
 
-        {/* Botón editar/guardar */}
         {!editing ? (
           <TouchableOpacity
             style={[styles.fabButton, styles.editButton]}
@@ -237,5 +239,6 @@ export const TaskDetailsScreen: React.FC = () => {
         )}
       </View>
     </SafeAreaView>
-  );
-};
+  </View>
+);
+}
