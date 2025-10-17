@@ -3,11 +3,11 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#ebfff4",
   },
   view: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#ff9b63",
     overflow: "hidden",
   },
   headerBackground: {
@@ -17,6 +17,7 @@ export const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "#ff9b63",
     height: 160,
+    zIndex: 0,
   },
   backNavs: {
     position: "absolute",
@@ -55,7 +56,7 @@ export const styles = StyleSheet.create({
     top: 140,
     left: 0,
     right: 0,
-    bottom: 0,
+    bottom: -20, 
     borderTopLeftRadius: 35,
     borderTopRightRadius: 35,
     backgroundColor: "#ebfff4",
@@ -65,6 +66,7 @@ export const styles = StyleSheet.create({
   scrollContent: {
     flex: 1,
     paddingBottom: 150,
+    flexGrow: 1,
   },
   card: {
     width: "100%",
