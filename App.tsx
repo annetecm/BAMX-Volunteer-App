@@ -13,6 +13,7 @@ import { VolunteerAdmin } from './src/screens/VolunteerAdmin';
 import { AdminTasksScreen } from './src/screens/AdminTasksScreen';
 import { AddTaskScreen } from './src/screens/AddTaskScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { VolunteerParticipationScreen } from './src/screens/VolunteerParticipationScreen';
 import RegisterAdmin from './src/screens/RegisterAdmin'; 
 import { TaskDetailsScreen } from './src/screens/TaskDetailsScreen';
 import {VolunteerManager} from './src/screens/VolunteerManager';
@@ -33,6 +34,7 @@ export type RootStackParamList = {
   VolunteerManager: undefined; 
   RegisterScreen: undefined;
   TaskDetails: { task: any };
+  VolunteerParticipation: { volunteerName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -106,7 +108,7 @@ React.useEffect(() => {
             <Stack.Screen name="VolunteerManager" component={VolunteerManager} />
             <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
             <Stack.Screen name="TaskDetails" component={TaskDetailsScreen} />
-
+            <Stack.Screen name= "VolunteerParticipation" component={VolunteerParticipationScreen} />
             
           </>
         ) : (
