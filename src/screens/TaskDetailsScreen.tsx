@@ -1,53 +1,101 @@
-import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, StyleSheet } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput } from "react-native";
 import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
-import { addTaskStyles } from "../styles/AddTaskStyles";
-import { doc, updateDoc } from "firebase/firestore";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { doc, updateDoc, getDocs, collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { RootStackParamList } from "../../App";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Platform } from "react-native";
-import { MaterialIcons } from '@expo/vector-icons';
-
-
+import { MaterialIcons } from "@expo/vector-icons";
+import { styles } from "../styles/TaskDetailsScreen";
 
 type TaskDetailsRouteProp = RouteProp<RootStackParamList, "TaskDetails">;
 
-export const TaskDetailsScreen: React.FC = () => {
+interface Volunteer {
+  id: string;
+  name: string;
+  selected: boolean;
+}
 
+export const TaskDetailsScreen: React.FC = () => {
   const route = useRoute<TaskDetailsRouteProp>();
   const navigation = useNavigation();
   const { task } = route.params;
 
   const [isCompleted, setIsCompleted] = useState(task.completed);
   const [editing, setEditing] = useState<boolean>(false);
+  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
+  const [taskVolunteers, setTaskVolunteers] = useState<string[]>(task.volunteers || []);
 
   const [newType, setNewType] = useState<string>(task.type ?? "");
-  const [newDescription, setNewDescription] = useState<string>(
-    task.description ?? ""
-  );
+  const [newDescription, setNewDescription] = useState<string>(task.description ?? "");
   const [newDeadline, setNewDeadline] = useState<string>(task.deadline ?? "");
-
   const [showPicker, setShowPicker] = useState(false);
   const [deadlineDate, setDeadlineDate] = useState<Date>(
-  task.deadline ? new Date(task.deadline) : new Date()
+    task.deadline ? new Date(task.deadline) : new Date()
   );
+
+  // 🔹 Cargar voluntarios disponibles y los de la tarea
+  useEffect(() => {
+    const volunteerRef = collection(db, "volunteers");
+    const unsubscribe = onSnapshot(volunteerRef, (snapshot) => {
+      const data: Volunteer[] = snapshot.docs.map((docSnap) => {
+        const d = docSnap.data() as any;
+        return {
+          id: docSnap.id,
+          name: d.fullName || "Sin nombre",
+          selected: d.selected ?? false,
+        };
+      });
+
+      // Mostrar tanto los disponibles (selected: false) como los que ya pertenecen a la tarea actual
+      const filtered = data.filter(
+        (v) => !v.selected || taskVolunteers.includes(v.id)
+      );
+      setVolunteers(filtered);
+    });
+    return () => unsubscribe();
+  }, [taskVolunteers]);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowPicker(Platform.OS === "ios");
     if (selectedDate) {
       setDeadlineDate(selectedDate);
-      // Aquí actualizas el campo string también
       setNewDeadline(selectedDate.toLocaleString());
     }
   };
+  const toggleVolunteer = async (volunteerId: string) => {
+  const isSelected = taskVolunteers.includes(volunteerId);
+
+  if (!isSelected && taskVolunteers.length >= task.neededAssistants) {
+    Alert.alert("Límite alcanzado", "No puedes agregar más voluntarios.");
+    return;
+  }
+
+  try {
+    const volunteerRef = doc(db, "volunteers", volunteerId);
+
+    if (isSelected) {
+      setTaskVolunteers((prev) => prev.filter((id) => id !== volunteerId));
+      await updateDoc(volunteerRef, { selected: false });
+      console.log(`Volunteer ${volunteerId} -> selected: false`);
+    } else {
+      setTaskVolunteers((prev) => [...prev, volunteerId]);
+      await updateDoc(volunteerRef, { selected: true });
+      console.log(`Volunteer ${volunteerId} -> selected: true`);
+    }
+  } catch (error) {
+    console.error("Error updating volunteer selection:", error);
+  }
+};
+
+
 
   const handleToggleComplete = async () => {
     try {
       const taskRef = doc(db, "tasks", task.id);
-      await updateDoc(taskRef, {
-        completed: !isCompleted,
-      });
+      await updateDoc(taskRef, { completed: !isCompleted });
       setIsCompleted(!isCompleted);
       Alert.alert(
         "Tarea actualizada",
@@ -59,6 +107,7 @@ export const TaskDetailsScreen: React.FC = () => {
     }
   };
 
+  // 🔹 Guardar cambios (tipo, descripción, fecha y voluntarios)
   const handleSaveEdits = async () => {
     if (!newType.trim() || !newDescription.trim()) {
       Alert.alert("Campos vacíos", "Por favor completa el tipo y la descripción.");
@@ -67,11 +116,27 @@ export const TaskDetailsScreen: React.FC = () => {
 
     try {
       const taskRef = doc(db, "tasks", task.id);
+
+      // 🔸 1. Actualizar la tarea
       await updateDoc(taskRef, {
         type: newType.trim(),
         description: newDescription.trim(),
         deadline: newDeadline.trim(),
+        volunteers: taskVolunteers,
+        assistants: taskVolunteers.length,
       });
+
+      // 🔸 2. Actualizar voluntarios en Firestore
+      const volunteerRef = collection(db, "volunteers");
+      const allVolunteers = await getDocs(volunteerRef);
+
+      for (const v of allVolunteers.docs) {
+        const isInTask = taskVolunteers.includes(v.id);
+        await updateDoc(doc(db, "volunteers", v.id), {
+          selected: isInTask,
+        });
+      }
+
       Alert.alert("Éxito", "Cambios guardados correctamente.");
       setEditing(false);
     } catch (error) {
@@ -80,182 +145,188 @@ export const TaskDetailsScreen: React.FC = () => {
     }
   };
 
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
   return (
-    <ScrollView style={addTaskStyles.container}>
-      <View style={addTaskStyles.orangeContainer2}>
-        <Text style={addTaskStyles.mainTitle}>Detalles de la tarea</Text>
+    <View style={{ flex: 1, backgroundColor: "#ff9b63" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#ff9b63" }}>
+        <View style={styles.view}>
+          {/* Header naranja */}
+          <View style={styles.headerBackground} />
 
-        <View style={addTaskStyles.inputRow}>
-          <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Tipo:</Text>
-          <Text style={[addTaskStyles.input, { marginLeft: 10 }]}>
-            {task.type || "Sin tipo"}
-          </Text>
-        </View>
-
-        <View style={addTaskStyles.inputRow}>
-          <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Descripción:</Text>
-          <Text style={[addTaskStyles.input, { marginLeft: 10 }]}>
-            {task.description || "Sin descripción"}
-          </Text>
-        </View>
-
-        <View style={addTaskStyles.inputRow}>
-          <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Fecha límite:</Text>
-          <Text style={[addTaskStyles.input, { marginLeft: 10 }]}>
-            {task.deadline}
-          </Text>
-        </View>
-
-        <View style={addTaskStyles.inputRow}>
-          <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>Asistentes:</Text>
-          <Text style={[addTaskStyles.input, { marginLeft: 10 }]}>
-            {task.assistants}/{task.neededAssistants}
-          </Text>
-        </View>
-
-        {/* para editar */}
-        {editing && (
-          <>
-            <View style={styles.editRow}>
-              <Text style={styles.editLabel}>Tipo</Text>
-              <TextInput
-                style={styles.editInput}
-                value={newType}
-                onChangeText={setNewType}
-                placeholder="Tipo de tarea"
-              />
+          {/* Botón de regreso */}
+          <TouchableOpacity style={styles.backNavs} onPress={handleBackPress}>
+            <View style={styles.backNavsChild}>
+              <Text style={styles.backArrow}>‹</Text>
             </View>
+          </TouchableOpacity>
 
-            <View style={styles.editRow}>
-              <Text style={styles.editLabel}>Descripción</Text>
-              <TextInput
-                style={[styles.editInput, { height: 90 }]}
-                value={newDescription}
-                onChangeText={setNewDescription}
-                placeholder="Descripción"
-                multiline
-              />
-            </View>
+          {/* Título principal */}
+          <Text style={styles.mainTitle}>Detalles de la tarea</Text>
 
-            <View style={styles.editRow}>
-              <Text style={styles.editLabel}>Fecha límite</Text>
-              <TouchableOpacity
-                style={[styles.editInput, { justifyContent: "center" }]}
-                onPress={() => setShowPicker(true)}
-              >
-                <Text style={{ color: "#fff" }}>
-                  {deadlineDate.toLocaleString()}
-                </Text>
-              </TouchableOpacity>
+          <View style={{ position: "absolute", top: 140, left: 0, right: 0, bottom: 0, backgroundColor: "#ebfff4" }} />
 
-              {/* El carrusel de fecha */}
-              {showPicker && (
-                <DateTimePicker
-                  value={deadlineDate}
-                  mode="datetime"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
-                  onChange={handleDateChange}
-                  minimumDate={new Date()} // evita fechas pasadas
-                />
+          {/* Contenedor verde */}
+          <View style={styles.greenContainer}>
+            <ScrollView
+              style={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 120 }}
+            >
+              {/* Cards normales */}
+              <View style={styles.card}>
+                <View style={styles.cardInner}>
+                  <View style={styles.iconPlaceholder}>
+                    <MaterialIcons name="category" size={20} color="#1d1b20" />
+                  </View>
+                  <View style={styles.cardTextContainer}>
+                    <Text style={styles.cardLabel}>Tipo</Text>
+                    <Text style={styles.cardValue}>{task.type || "Sin tipo"}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.card}>
+                <View style={styles.cardInner}>
+                  <View style={styles.iconPlaceholder}>
+                    <MaterialIcons name="description" size={20} color="#1d1b20" />
+                  </View>
+                  <View style={styles.cardTextContainer}>
+                    <Text style={styles.cardLabel}>Descripción</Text>
+                    <Text style={styles.cardValue}>{task.description || "Sin descripción"}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.card}>
+                <View style={styles.cardInner}>
+                  <View style={styles.iconPlaceholder}>
+                    <MaterialIcons name="event" size={20} color="#1d1b20" />
+                  </View>
+                  <View style={styles.cardTextContainer}>
+                    <Text style={styles.cardLabel}>Fecha límite</Text>
+                    <Text style={styles.cardValue}>{task.deadline || "Sin fecha"}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Asistentes */}
+              <View style={styles.card}>
+                <View style={styles.cardInner}>
+                  <View style={styles.iconPlaceholder}>
+                    <MaterialIcons name="people" size={20} color="#1d1b20" />
+                  </View>
+                  <View style={styles.cardTextContainer}>
+                    <Text style={styles.cardLabel}>Asistentes</Text>
+                    <Text style={styles.cardValue}>
+                      {taskVolunteers.length}/{task.neededAssistants}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Mostrar voluntarios (solo en edición) */}
+              {editing && (
+                <View>
+                  <Text style={{ marginLeft: 20, fontWeight: "bold", fontSize: 16 }}>
+                    Voluntarios asignados / disponibles
+                  </Text>
+                  {volunteers.map((v) => (
+                    <TouchableOpacity
+                      key={v.id}
+                      style={{
+                        backgroundColor: taskVolunteers.includes(v.id) ? "#b7e4c7" : "#fff",
+                        padding: 10,
+                        margin: 8,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: "#ccc",
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                      }}
+                      onPress={() => toggleVolunteer(v.id)}
+                    >
+                      <Text>{v.name}</Text>
+                      <Text>{taskVolunteers.includes(v.id) ? "✓" : "+"}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               )}
-            </View>
-          </>
-        )}
 
-        {/* Botón de completar */}
-        <TouchableOpacity
-          style={[styles.fabButton, styles.completeButton]}
-          onPress={handleToggleComplete}
-        >
-          <MaterialIcons name="check" size={28} color="#fff" />
-        </TouchableOpacity>
+              {/* Campos de edición */}
+              {editing && (
+                <View style={styles.editSection}>
+                  <View style={styles.editCard}>
+                    <Text style={styles.editLabel}>Tipo</Text>
+                    <TextInput
+                      style={styles.editInput}
+                      value={newType}
+                      onChangeText={setNewType}
+                    />
+                  </View>
 
-        {/* Botón editar/guardar */}
-        {!editing ? (
+                  <View style={styles.editCard}>
+                    <Text style={styles.editLabel}>Descripción</Text>
+                    <TextInput
+                      style={[styles.editInput, styles.editInputMultiline]}
+                      value={newDescription}
+                      onChangeText={setNewDescription}
+                      multiline
+                    />
+                  </View>
+
+                  <View style={styles.editCard}>
+                    <Text style={styles.editLabel}>Fecha límite</Text>
+                    <TouchableOpacity onPress={() => setShowPicker(true)}>
+                      <Text style={styles.dateText}>
+                        {deadlineDate.toLocaleString()}
+                      </Text>
+                    </TouchableOpacity>
+                    {showPicker && (
+                      <DateTimePicker
+                        value={deadlineDate}
+                        mode="datetime"
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                        onChange={handleDateChange}
+                      />
+                    )}
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+
+          {/* Botones flotantes */}
           <TouchableOpacity
-            style={[styles.fabButton, styles.editButton]}
-            onPress={() => setEditing(true)}
+            style={[styles.fabButton, styles.completeButton]}
+            onPress={handleToggleComplete}
           >
-            <Text style={styles.fabIcon}>✎</Text>
+            <MaterialIcons
+              name={isCompleted ? "check-circle" : "check"}
+              size={28}
+              color="#fff"
+            />
           </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.fabButton, styles.saveButton]}
-            onPress={handleSaveEdits}
-          >
-            <Text style={styles.fabIcon}>💾</Text>
-          </TouchableOpacity>
-        )}
-        
-      </View>
-    </ScrollView>
+
+          {!editing ? (
+            <TouchableOpacity
+              style={[styles.fabButton, styles.editButton]}
+              onPress={() => setEditing(true)}
+            >
+              <MaterialIcons name="edit" size={24} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.fabButton, styles.saveButton]}
+              onPress={handleSaveEdits}
+            >
+              <MaterialIcons name="save" size={24} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </SafeAreaView>
+    </View>
   );
 };
-
-
-const styles = StyleSheet.create({
-  row: {
-    marginBottom: 14,
-  },
-  label: {
-    color: "#fff",
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  value: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  editRow: {
-    marginBottom: 14,
-  },
-  editLabel: {
-    color: "#fff",
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  editInput: {
-    backgroundColor: "rgba(255,255,255,0.12)",
-    color: "#fff",
-    borderRadius: 10,
-    padding: 10,
-  },
-  fabContainer: {
-    position: 'absolute',
-    bottom: 30,
-    right: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-  },
-  fabButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  editButton: {
-    backgroundColor: '#FF9B63', 
-    position: 'absolute',
-    bottom: 45,
-    right: 45,  
-  },
-  completeButton: {
-    backgroundColor: '#FF9B63', 
-
-  },
-  fabIcon: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  saveButton: {
-    backgroundColor: '#FF9B63', // verde (guardar)
-  },
-});
