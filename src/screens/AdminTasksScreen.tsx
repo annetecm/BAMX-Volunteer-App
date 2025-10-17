@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, onSnapshot } from "firebase/firestore";
+import { taskStyles } from '../styles/TaskStyles';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_API_KEY,
@@ -85,15 +86,10 @@ export const AdminTasksScreen: React.FC = () => {
               <TouchableOpacity
                 key={task.id}
                 onPress={() => navigation.navigate('TaskDetails', { task })}
-                style={{
-                  padding: 15,
-                  marginVertical: 8,
-                  backgroundColor: '#f2f2f2',
-                  borderRadius: 10,
-                }}
+                style={taskStyles.adminTaskItem}
               >
-                <Text style={{ fontSize: 18, fontWeight: '600', color: '#777' }}>{task.type}</Text>
-                <Text style={{ color: '#777' }}>{task.deadline}</Text>
+                <Text style={taskStyles.adminTaskTitle}>{task.type}</Text>
+                <Text style={{ color: '#777' }}>  {task.deadline}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>

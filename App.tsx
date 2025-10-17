@@ -15,6 +15,7 @@ import { AddTaskScreen } from './src/screens/AddTaskScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import RegisterAdmin from './src/screens/RegisterAdmin'; 
 import { TaskDetailsScreen } from './src/screens/TaskDetailsScreen';
+import {VolunteerManager} from './src/screens/VolunteerManager';
 
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from './src/firebaseConfig';
@@ -28,7 +29,8 @@ export type RootStackParamList = {
   AddTask: undefined;
   Settings: undefined;
   AdminTasks: undefined;  
-  VolunteerAdmin: undefined;  
+  VolunteerAdmin: undefined; 
+  VolunteerManager: undefined; 
   RegisterScreen: undefined;
   TaskDetails: { task: any };
 };
@@ -101,6 +103,7 @@ React.useEffect(() => {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="AdminTasks" component={AdminTasksScreen} />
             <Stack.Screen name="VolunteerAdmin" component={VolunteerAdmin} />
+            <Stack.Screen name="VolunteerAdmin" component={VolunteerManager} />
             <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
             <Stack.Screen name="TaskDetails" component={TaskDetailsScreen} />
 
@@ -117,7 +120,6 @@ React.useEffect(() => {
     </NavigationContainer>
   );
 }
-
 
 
 export default function App() {

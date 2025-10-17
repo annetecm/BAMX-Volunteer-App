@@ -27,13 +27,14 @@ type RootStackParamList = {
   Settings: undefined;
   AdminTasks: undefined;
   VolunteerAdmin: undefined;
+  VolunteerManager: undefined;
   RegisterScreen: undefined;
   VolunteerDetails: { volunteer: any };
 };
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VolunteerAdmin'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VolunteerManager'>;
 
-export const VolunteerAdmin: React.FC = () => {
+export const VolunteerManager: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [activeTab, setActiveTab] = useState('mailbox');
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
@@ -90,10 +91,6 @@ export const VolunteerAdmin: React.FC = () => {
             </TouchableOpacity>
             <Text style={screenStyles.adminSectionVTitle}>Voluntarios</Text>
           </View>
-
-          <TouchableOpacity style={screenStyles.addVolunteerButton} onPress={handleAddVolunteer}>
-            <Text style={screenStyles.addVolunteerButtonText}>Añadir voluntario +</Text>
-          </TouchableOpacity>
 
           <ScrollView 
             style={screenStyles.volunteersList} 
