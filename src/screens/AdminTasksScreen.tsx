@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, SafeAreaView, Text, TouchableOpacity } from 'react-native';
+import { View, ScrollView, SafeAreaView, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Header } from '../components/Header';
-import { Task } from '../components/Task';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { screenStyles } from '../styles/ScreenStyles';
 import { StatusBar } from 'expo-status-bar';
-
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, onSnapshot } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, getDoc, Timestamp } from "firebase/firestore";
+import { auth } from '../firebaseConfig';
 import { taskStyles } from '../styles/TaskStyles';
 
 const firebaseConfig = {
@@ -37,39 +36,80 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdminTasks'
 export const AdminTasksScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [activeTab, setActiveTab] = useState('mailbox');
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [userName, setUserName] = useState<string>('Usuario');
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) { setLoadingUser(false); return; }
+
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) {
+          const data = snap.data() as { fullName?: string; phone_number?: string | null; email?: string | null; };
+          const name =
+            (data.fullName && data.fullName.trim()) ||
+            (data.phone_number && data.phone_number.trim()) ||
+            (data.email && data.email.split('@')[0]) ||
+            'Usuario';
+          setUserName(name);
+        } else {
+          const fallback =
+            (user.displayName && user.displayName.trim()) ||
+            (user.phoneNumber && user.phoneNumber.trim()) ||
+            (user.email ? user.email.split('@')[0] : 'Usuario');
+          setUserName(fallback);
+        }
+      } catch (e: any) {
+        Alert.alert('Error al cargar usuario', e?.message ?? 'Intenta nuevamente.');
+      } finally {
+        setLoadingUser(false);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const taskRef = collection(db, "tasks");
     const unsubscribe = onSnapshot(taskRef, (querySnapshot) => {
-      const dataArray = querySnapshot.docs.map((doc) => {
-        const d = doc.data() as any;
+      const dataArray = querySnapshot.docs
+        .map((doc) => {
+          const d = doc.data() as any;
 
-        let formattedDeadline = "Sin fecha";
+          if (d.completed) return null; 
 
-        if (d.deadline) {
-          if (typeof d.deadline === "object" && "seconds" in d.deadline) {
-            // Timestamp de Firebase
-            formattedDeadline = new Date(d.deadline.seconds * 1000).toLocaleString();
-          } else if (typeof d.deadline === "string") {
-            // Intentar parsear string antiguo
-            const parsedDate = new Date(d.deadline);
-            if (!isNaN(parsedDate.getTime())) {
-              formattedDeadline = parsedDate.toLocaleString();
+          let deadlineDate: Date | null = null;
+          if (d.deadline) {
+            if (typeof d.deadline === "object" && "seconds" in d.deadline) {
+              deadlineDate = new Date(d.deadline.seconds * 1000);
+            } else if (typeof d.deadline === "string") {
+              const parsedDate = new Date(d.deadline);
+              if (!isNaN(parsedDate.getTime())) {
+                deadlineDate = parsedDate;
+              }
             }
           }
-        }
 
-        return {
-          id: doc.id,
-          title: d.title || "Sin título",
-          type: d.type || "Sin tipo",
-          description: d.description || "Sin descripción",
-          completed: d.completed ?? false,
-          neededAssistants: d.neededAssistants ?? 0,
-          deadline: formattedDeadline,
-        };
+          return {
+            id: doc.id,
+            title: d.title || "Sin título",
+            type: d.type || "Sin tipo",
+            description: d.description || "Sin descripción",
+            completed: d.completed ?? false,
+            neededAssistants: d.neededAssistants ?? 0,
+            deadline: deadlineDate ? deadlineDate.toLocaleString() : "Sin fecha",
+            rawDeadline: deadlineDate,
+          };
+        })
+        .filter(Boolean) as any[];
+
+      dataArray.sort((a, b) => {
+        if (!a.rawDeadline) return 1;
+        if (!b.rawDeadline) return -1;
+        return a.rawDeadline.getTime() - b.rawDeadline.getTime();
       });
+
       setTasks(dataArray);
     });
 
@@ -82,13 +122,23 @@ export const AdminTasksScreen: React.FC = () => {
     else if (tab === 'menu') navigation.navigate('Main');
   };
 
+  if (loadingUser) {
+    return (
+      <SafeAreaView style={screenStyles.adminContainer}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={screenStyles.adminContainer}>
-      <Header userName="Andrea" title="Administrador de tareas" />
+      <Header userName={userName} title="Administrador de tareas" />
 
       <View style={screenStyles.adminContent}>
         <View style={screenStyles.adminTaskSection}>
-          <Text style={screenStyles.adminSectionTitle}>Tareas</Text>
+          <Text style={screenStyles.adminSectionTitle}>Tareas pendientes</Text>
 
           <ScrollView
             style={screenStyles.adminTaskList}
