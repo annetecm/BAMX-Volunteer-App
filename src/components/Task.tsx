@@ -24,7 +24,9 @@ export interface Volunteer {
   area?: string,
   curp?: string,
   ine?: {data?: string},
-  medical_certificate?: {data?: string}
+  medical_certificate?: {data?: string},
+  attended?: any
+
 }
 
 interface TaskFilterProps {
