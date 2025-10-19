@@ -15,8 +15,16 @@ export interface Task {
 
 export interface Volunteer {
   id: string;
-  name: string;
-  attended?: boolean;
+  fullName: string;
+  correo?: string;
+  emergency_phone?: string;
+  selected?: boolean;
+  role?: string;
+  blood_type?: string;
+  area?: string,
+  curp?: string,
+  ine?: {data?: string},
+  medical_certificate?: {data?: string}
 }
 
 interface TaskFilterProps {
@@ -182,7 +190,7 @@ export const VolunteerItem: React.FC<VolunteerItemProps> = ({ volunteer, onPress
       <View style={taskStyles.volunteerIcon}>
         <Text style={taskStyles.volunteerIconText}>∑</Text>
       </View>
-      <Text style={taskStyles.volunteerName}>{volunteer.name}</Text>
+      <Text style={taskStyles.volunteerName}>{volunteer.fullName}</Text>
     </TouchableOpacity>
   );
 };

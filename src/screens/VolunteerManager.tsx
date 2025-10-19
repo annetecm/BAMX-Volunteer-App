@@ -21,6 +21,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+
 type RootStackParamList = {
   Main: undefined;
   AddTask: undefined;
@@ -29,7 +30,7 @@ type RootStackParamList = {
   VolunteerAdmin: undefined;
   VolunteerManager: undefined;
   RegisterScreen: undefined;
-  VolunteerDetails: { volunteer: any };
+  VolunteerDetails: { volunteer: Volunteer };
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VolunteerManager'>;
@@ -39,28 +40,35 @@ export const VolunteerManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState('mailbox');
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
 
-  useEffect(() => {
-    const volunteerRef = collection(db, 'volunteers');
-    const unsubscribe = onSnapshot(volunteerRef, (querySnapshot) => {
-      const dataArray = querySnapshot.docs.map((doc) => {
-        const data = doc.data() as any;
-        return { id: doc.id, name: data.fullName || 'Sin nombre' };
-      });
-      setVolunteers(dataArray);
-    });
+useEffect(() => {
+  const volunteerRef = collection(db, 'volunteers');
+  const unsubscribe = onSnapshot(volunteerRef, (querySnapshot) => {
+    const dataArray: Volunteer[] = querySnapshot.docs.map((doc) => {
+      const data = doc.data() as any;
+      return {
+        id: doc.id,
+        fullName: data.fullName || 'Sin nombre',
+        correo: data.correo || 'Sin información',
+        emergency_phone: data.emergency_phone || 'Sin información',
+        selected: data.selected ?? false,
+        blood_type: data.blood_type,
+        area: data.area,
+        curp: data.curp,
+        ine: data.ine
 
-    return () => unsubscribe();
-  }, []);
+      };
+    });
+    setVolunteers(dataArray);
+  });
+
+  return () => unsubscribe();
+}, []);
 
   const handleVolunteerPress = (volunteerId: string) => {
     const selected = volunteers.find((v) => v.id === volunteerId);
     if (selected) {
       navigation.navigate('VolunteerDetails', { volunteer: selected });
     }
-  };
-
-  const handleAddVolunteer = () => {
-    navigation.navigate('RegisterScreen');
   };
 
   const handleBackPress = () => {
@@ -76,13 +84,11 @@ export const VolunteerManager: React.FC = () => {
     }
   };
 
+
   return (
     <SafeAreaView style={screenStyles.adminContainer}>
-      <Header 
-        userName="Andrea"
-        title="Administrador de tareas"
-      />
-      
+      <Header userName="Andrea" title="Administrador de tareas" />
+
       <View style={screenStyles.adminContent}>
         <View style={screenStyles.volunteersSection}>
           <View style={screenStyles.volunteersSectionHeader}>
@@ -92,8 +98,8 @@ export const VolunteerManager: React.FC = () => {
             <Text style={screenStyles.adminSectionVTitle}>Voluntarios</Text>
           </View>
 
-          <ScrollView 
-            style={screenStyles.volunteersList} 
+          <ScrollView
+            style={screenStyles.volunteersList}
             contentContainerStyle={screenStyles.volunteersScrollContent}
             showsVerticalScrollIndicator={false}
           >
@@ -103,7 +109,7 @@ export const VolunteerManager: React.FC = () => {
               </Text>
             ) : (
               volunteers.map((volunteer) => (
-                <VolunteerItem 
+                <VolunteerItem
                   key={volunteer.id}
                   volunteer={volunteer}
                   onPress={() => handleVolunteerPress(volunteer.id)}
@@ -114,8 +120,8 @@ export const VolunteerManager: React.FC = () => {
         </View>
       </View>
 
-      <BottomNavigation 
-        activeTab={activeTab} 
+      <BottomNavigation
+        activeTab={activeTab}
         onTabPress={handleTabPress}
         onNavigateToAddTask={() => navigation.navigate('AddTask')}
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
