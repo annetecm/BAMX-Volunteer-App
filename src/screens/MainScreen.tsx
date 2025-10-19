@@ -89,7 +89,7 @@ export const MainScreen: React.FC = () => {
 
       const loadedVolunteers: Volunteer[] = Array.from(volunteersNames).map((name, index) => ({
         id: (index + 1).toString(),
-        name,
+        fullName: name,
         attended: true,
       }));
 
@@ -156,7 +156,7 @@ export const MainScreen: React.FC = () => {
               <VolunteerItem
                 key={volunteer.id}
                 volunteer={volunteer}
-                onPress={() => navigation.navigate('VolunteerParticipation', { volunteerName: volunteer.name })}
+                onPress={() => navigation.navigate('VolunteerParticipation', { volunteerName: volunteer.fullName })}
               />
             ))}
           </View>
