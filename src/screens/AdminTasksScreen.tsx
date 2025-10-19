@@ -39,23 +39,36 @@ export const AdminTasksScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('mailbox');
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  // Obtener tareas desde Firebase
   useEffect(() => {
     const taskRef = collection(db, "tasks");
     const unsubscribe = onSnapshot(taskRef, (querySnapshot) => {
       const dataArray = querySnapshot.docs.map((doc) => {
-        const d = doc.data() as { 
-          deadline?: any; [key: string]: any; title: any; type: any; description: any; completed: any; assistants: any; neededAssistants: any; 
-        };
-        let formattedDeadline = "";
-        if (d.deadline && typeof d.deadline === "object" && "seconds" in d.deadline) {
-          formattedDeadline = new Date((d.deadline as { seconds: number }).seconds * 1000).toLocaleDateString();
+        const d = doc.data() as any;
+
+        let formattedDeadline = "Sin fecha";
+
+        if (d.deadline) {
+          if (typeof d.deadline === "object" && "seconds" in d.deadline) {
+            // Timestamp de Firebase
+            formattedDeadline = new Date(d.deadline.seconds * 1000).toLocaleString();
+          } else if (typeof d.deadline === "string") {
+            // Intentar parsear string antiguo
+            const parsedDate = new Date(d.deadline);
+            if (!isNaN(parsedDate.getTime())) {
+              formattedDeadline = parsedDate.toLocaleString();
+            }
+          }
         }
-        return { 
+
+        return {
           id: doc.id,
-          ...d, 
-          deadline: formattedDeadline || "Sin fecha", 
-         };
+          title: d.title || "Sin título",
+          type: d.type || "Sin tipo",
+          description: d.description || "Sin descripción",
+          completed: d.completed ?? false,
+          neededAssistants: d.neededAssistants ?? 0,
+          deadline: formattedDeadline,
+        };
       });
       setTasks(dataArray);
     });

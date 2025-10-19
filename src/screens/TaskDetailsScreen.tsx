@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput } from "react-native";
 import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { doc, updateDoc, getDocs, collection, onSnapshot } from "firebase/firestore";
+import { doc, updateDoc, getDocs, collection, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { RootStackParamList } from "../../App";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -30,13 +30,20 @@ export const TaskDetailsScreen: React.FC = () => {
 
   const [newType, setNewType] = useState<string>(task.type ?? "");
   const [newDescription, setNewDescription] = useState<string>(task.description ?? "");
-  const [newDeadline, setNewDeadline] = useState<string>(task.deadline ?? "");
-  const [showPicker, setShowPicker] = useState(false);
-  const [deadlineDate, setDeadlineDate] = useState<Date>(
-    task.deadline ? new Date(task.deadline) : new Date()
-  );
 
-  // 🔹 Cargar voluntarios disponibles y los de la tarea
+  const parseTaskDeadline = (deadline: any) => {
+    if (!deadline) return new Date();
+    if (typeof deadline === "object" && "seconds" in deadline) {
+      return new Date(deadline.seconds * 1000);
+    }
+    const parsed = new Date(deadline);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
+  const [deadlineDate, setDeadlineDate] = useState<Date>(parseTaskDeadline(task.deadline));
+  const [newDeadline, setNewDeadline] = useState<string>(deadlineDate.toLocaleString());
+  const [showPicker, setShowPicker] = useState(false);
+
   useEffect(() => {
     const volunteerRef = collection(db, "volunteers");
     const unsubscribe = onSnapshot(volunteerRef, (snapshot) => {
@@ -58,11 +65,11 @@ export const TaskDetailsScreen: React.FC = () => {
     return () => unsubscribe();
   }, [taskVolunteers]);
 
+ 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowPicker(Platform.OS === "ios");
     if (selectedDate) {
       setDeadlineDate(selectedDate);
-      setNewDeadline(selectedDate.toLocaleString());
     }
   };
   const toggleVolunteer = async (volunteerId: string) => {
@@ -90,8 +97,6 @@ export const TaskDetailsScreen: React.FC = () => {
   }
 };
 
-
-
   const handleToggleComplete = async () => {
     try {
       const taskRef = doc(db, "tasks", task.id);
@@ -107,7 +112,6 @@ export const TaskDetailsScreen: React.FC = () => {
     }
   };
 
-  // 🔹 Guardar cambios (tipo, descripción, fecha y voluntarios)
   const handleSaveEdits = async () => {
     if (!newType.trim() || !newDescription.trim()) {
       Alert.alert("Campos vacíos", "Por favor completa el tipo y la descripción.");
@@ -117,16 +121,14 @@ export const TaskDetailsScreen: React.FC = () => {
     try {
       const taskRef = doc(db, "tasks", task.id);
 
-      // 🔸 1. Actualizar la tarea
       await updateDoc(taskRef, {
         type: newType.trim(),
         description: newDescription.trim(),
-        deadline: newDeadline.trim(),
+        deadline: Timestamp.fromDate(deadlineDate),
         volunteers: taskVolunteers,
         assistants: taskVolunteers.length,
       });
 
-      // 🔸 2. Actualizar voluntarios en Firestore
       const volunteerRef = collection(db, "volunteers");
       const allVolunteers = await getDocs(volunteerRef);
 
