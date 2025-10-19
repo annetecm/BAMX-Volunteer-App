@@ -43,7 +43,18 @@ export const VolunteerAdmin: React.FC = () => {
     const unsubscribe = onSnapshot(volunteerRef, (querySnapshot) => {
       const dataArray = querySnapshot.docs.map((doc) => {
         const data = doc.data() as any;
-        return { id: doc.id, name: data.fullName || 'Sin nombre' };
+        return {
+        id: doc.id,
+        fullName: data.fullName || 'Sin nombre',
+        correo: data.correo || 'Sin información',
+        emergency_phone: data.emergency_phone || 'Sin información',
+        selected: data.selected ?? false,
+        blood_type: data.blood_type,
+        area: data.area,
+        curp: data.curp,
+        ine: data.ine
+
+      };
       });
       setVolunteers(dataArray);
     });
