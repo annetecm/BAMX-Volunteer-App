@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, SafeAreaView, Text, TouchableOpacity } from 'react-native';
+import { View, ScrollView, SafeAreaView, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Header } from '../components/Header';
@@ -7,7 +7,8 @@ import { VolunteerItem, Volunteer } from '../components/Task';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { screenStyles } from '../styles/ScreenStyles';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { auth } from '../firebaseConfig';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_API_KEY,
@@ -37,6 +38,38 @@ export const VolunteerAdmin: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const [activeTab, setActiveTab] = useState('mailbox');
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
+  const [userName, setUserName] = useState<string>('Usuario');
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) { setLoadingUser(false); return; }
+
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) {
+          const data = snap.data() as { fullName?: string; phone_number?: string | null; email?: string | null; };
+          const name =
+            (data.fullName && data.fullName.trim()) ||
+            (data.phone_number && data.phone_number.trim()) ||
+            (data.email && data.email.split('@')[0]) ||
+            'Usuario';
+          setUserName(name);
+        } else {
+          const fallback =
+            (user.displayName && user.displayName.trim()) ||
+            (user.phoneNumber && user.phoneNumber.trim()) ||
+            (user.email ? user.email.split('@')[0] : 'Usuario');
+          setUserName(fallback);
+        }
+      } catch (e: any) {
+        Alert.alert('Error al cargar usuario', e?.message ?? 'Intenta nuevamente.');
+      } finally {
+        setLoadingUser(false);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const volunteerRef = collection(db, 'volunteers');
@@ -44,17 +77,16 @@ export const VolunteerAdmin: React.FC = () => {
       const dataArray = querySnapshot.docs.map((doc) => {
         const data = doc.data() as any;
         return {
-        id: doc.id,
-        fullName: data.fullName || 'Sin nombre',
-        correo: data.correo || 'Sin información',
-        emergency_phone: data.emergency_phone || 'Sin información',
-        selected: data.selected ?? false,
-        blood_type: data.blood_type,
-        area: data.area,
-        curp: data.curp,
-        ine: data.ine
-
-      };
+          id: doc.id,
+          fullName: data.fullName || 'Sin nombre',
+          correo: data.correo || 'Sin información',
+          emergency_phone: data.emergency_phone || 'Sin información',
+          selected: data.selected ?? false,
+          blood_type: data.blood_type,
+          area: data.area,
+          curp: data.curp,
+          ine: data.ine
+        };
       });
       setVolunteers(dataArray);
     });
@@ -64,35 +96,31 @@ export const VolunteerAdmin: React.FC = () => {
 
   const handleVolunteerPress = (volunteerId: string) => {
     const selected = volunteers.find((v) => v.id === volunteerId);
-    if (selected) {
-      navigation.navigate('VolunteerDetails', { volunteer: selected });
-    }
+    if (selected) navigation.navigate('VolunteerDetails', { volunteer: selected });
   };
 
-  const handleAddVolunteer = () => {
-    navigation.navigate('RegisterScreen');
-  };
-
-  const handleBackPress = () => {
-    navigation.navigate('AdminTasks');
-  };
-
+  const handleAddVolunteer = () => navigation.navigate('RegisterScreen');
+  const handleBackPress = () => navigation.navigate('AdminTasks');
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
-    if (tab === 'settings') {
-      navigation.navigate('Settings');
-    } else if (tab === 'menu') {
-      navigation.navigate('Main');
-    }
+    if (tab === 'settings') navigation.navigate('Settings');
+    else if (tab === 'menu') navigation.navigate('Main');
   };
+
+  if (loadingUser) {
+    return (
+      <SafeAreaView style={screenStyles.adminContainer}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={screenStyles.adminContainer}>
-      <Header 
-        userName="Andrea"
-        title="Administrador de tareas"
-      />
-      
+      <Header userName={userName} title="Administrador de tareas" />
+
       <View style={screenStyles.adminContent}>
         <View style={screenStyles.volunteersSection}>
           <View style={screenStyles.volunteersSectionHeader}>
@@ -106,8 +134,8 @@ export const VolunteerAdmin: React.FC = () => {
             <Text style={screenStyles.addVolunteerButtonText}>Añadir voluntario +</Text>
           </TouchableOpacity>
 
-          <ScrollView 
-            style={screenStyles.volunteersList} 
+          <ScrollView
+            style={screenStyles.volunteersList}
             contentContainerStyle={screenStyles.volunteersScrollContent}
             showsVerticalScrollIndicator={false}
           >
@@ -117,7 +145,7 @@ export const VolunteerAdmin: React.FC = () => {
               </Text>
             ) : (
               volunteers.map((volunteer) => (
-                <VolunteerItem 
+                <VolunteerItem
                   key={volunteer.id}
                   volunteer={volunteer}
                   onPress={() => handleVolunteerPress(volunteer.id)}
@@ -128,8 +156,8 @@ export const VolunteerAdmin: React.FC = () => {
         </View>
       </View>
 
-      <BottomNavigation 
-        activeTab={activeTab} 
+      <BottomNavigation
+        activeTab={activeTab}
         onTabPress={handleTabPress}
         onNavigateToAddTask={() => navigation.navigate('AddTask')}
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
