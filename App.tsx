@@ -13,6 +13,7 @@ import { VolunteerAdmin } from './src/screens/VolunteerAdmin';
 import { AdminTasksScreen } from './src/screens/AdminTasksScreen';
 import { AddTaskScreen } from './src/screens/AddTaskScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { VolunteerParticipationScreen } from './src/screens/VolunteerParticipationScreen';
 import RegisterAdmin from './src/screens/RegisterAdmin'; 
 import { TaskDetailsScreen } from './src/screens/TaskDetailsScreen';
 import {VolunteerManager} from './src/screens/VolunteerManager';
@@ -33,6 +34,7 @@ export type RootStackParamList = {
   VolunteerManager: undefined; 
   RegisterScreen: undefined;
   TaskDetails: { task: any };
+  VolunteerParticipation: { volunteerName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -49,7 +51,7 @@ React.useEffect(() => {
     try {
       if (!u) { setInit(false); return; }
 
-      // 1) Detecta admin por UID o por email como ID (ajusta según tu BD)
+
       let isAdmin = false;
       const adminByUid = await getDoc(doc(db, 'admins', u.uid));
       if (adminByUid.exists()) isAdmin = true;
@@ -60,24 +62,21 @@ React.useEffect(() => {
       }
 
       if (isAdmin) {
-        // Admin: no crear/editar nada en "users"
+  
         setInit(false);
         return;
       }
 
-      // 2) Usuarios NO admin: solo verifica que exista el doc (no lo crees aquí)
+      
       const ref = doc(db, 'users', u.uid);
       const snap = await getDoc(ref);
 
-      // Si necesitas crear por primera vez, hazlo SOLO en el flujo de registro,
-      // no aquí. Aquí solo deja pasar o saca al usuario.
+
       if (!snap.exists()) {
-        // Opcional: puedes desloguear y avisar
-        // await signOut(auth);
-        // Alert.alert('Cuenta no registrada', 'Contacta al administrador o regístrate.');
+
       }
     } catch (e) {
-      // si hay error, no hagas nada destructivo aquí
+
       console.log(e);
     } finally {
       setInit(false);
@@ -109,7 +108,7 @@ React.useEffect(() => {
             <Stack.Screen name="VolunteerManager" component={VolunteerManager} />
             <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
             <Stack.Screen name="TaskDetails" component={TaskDetailsScreen} />
-
+            <Stack.Screen name= "VolunteerParticipation" component={VolunteerParticipationScreen} />
             
           </>
         ) : (

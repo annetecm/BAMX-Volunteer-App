@@ -185,6 +185,7 @@ const RegisterScreen: React.FC = () => {
 
       await setDoc(doc(db, "volunteers", uid), {
   id_volunteer: uid,
+  fullName: formData.fullName,
   correo: formData.email,
   curp: formData.curp,
   ine: ineBase64 ? { data: ineBase64, metadata: ineMetadata } : null,
