@@ -98,19 +98,43 @@ export const TaskDetailsScreen: React.FC = () => {
 };
 
   const handleToggleComplete = async () => {
+  if (!isCompleted) {
+    Alert.alert(
+      "Confirmar",
+      "Si marca esta tarea como completada, será eliminada de la vista de tareas. ¿Quiere proceder?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Sí",
+          onPress: async () => {
+            try {
+              const taskRef = doc(db, "tasks", task.id);
+              await updateDoc(taskRef, { completed: true });
+              setIsCompleted(true);
+              Alert.alert("Tarea completada", "La tarea se marcó como completada.");
+            } catch (error) {
+              console.error("Error al actualizar tarea:", error);
+              Alert.alert("Error", "No se pudo actualizar la tarea");
+            }
+          },
+        },
+      ]
+    );
+  } else {
     try {
       const taskRef = doc(db, "tasks", task.id);
-      await updateDoc(taskRef, { completed: !isCompleted });
-      setIsCompleted(!isCompleted);
-      Alert.alert(
-        "Tarea actualizada",
-        !isCompleted ? "La tarea se marcó como completada" : "La tarea se marcó como pendiente"
-      );
+      await updateDoc(taskRef, { completed: false });
+      setIsCompleted(false);
+      Alert.alert("Tarea actualizada", "La tarea se marcó como pendiente");
     } catch (error) {
       console.error("Error al actualizar tarea:", error);
       Alert.alert("Error", "No se pudo actualizar la tarea");
     }
-  };
+  }
+};
 
   const handleSaveEdits = async () => {
     if (!newType.trim() || !newDescription.trim()) {
