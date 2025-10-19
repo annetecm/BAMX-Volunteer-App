@@ -17,6 +17,7 @@ import { VolunteerParticipationScreen } from './src/screens/VolunteerParticipati
 import RegisterAdmin from './src/screens/RegisterAdmin'; 
 import { TaskDetailsScreen } from './src/screens/TaskDetailsScreen';
 import {VolunteerManager} from './src/screens/VolunteerManager';
+import { VolunteerDetails } from './src/screens/VolunteerDetails';
 
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from './src/firebaseConfig';
@@ -35,6 +36,7 @@ export type RootStackParamList = {
   RegisterScreen: undefined;
   TaskDetails: { task: any };
   VolunteerParticipation: { volunteerName: string };
+  VolunteerDetails: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -106,6 +108,7 @@ React.useEffect(() => {
             <Stack.Screen name="AdminTasks" component={AdminTasksScreen} />
             <Stack.Screen name="VolunteerAdmin" component={VolunteerAdmin} />
             <Stack.Screen name="VolunteerManager" component={VolunteerManager} />
+            <Stack.Screen name="VolunteerDetails" component={VolunteerDetails} />
             <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
             <Stack.Screen name="TaskDetails" component={TaskDetailsScreen} />
             <Stack.Screen name= "VolunteerParticipation" component={VolunteerParticipationScreen} />

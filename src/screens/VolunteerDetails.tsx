@@ -17,7 +17,7 @@ type RootStackParamList = {
   VolunteerDetails: { volunteer: any };
 };
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VolunteerManager'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VolunteerDetails'>;
 
 const openPDF = (base64Data?: string) => {
   if (!base64Data) return;
