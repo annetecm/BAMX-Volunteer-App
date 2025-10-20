@@ -2,8 +2,8 @@ import { StyleSheet } from 'react-native';
 
 export const headerStyles = StyleSheet.create({
   header: {
-    backgroundColor: '#ff9b63', // Color exacto del ejemplo (minúsculas, sin A)
-    paddingTop: 40,
+    backgroundColor: '#ff9b63',
+    paddingTop: 20,
     paddingBottom: 25,
     paddingHorizontal: 24,
   },
@@ -13,8 +13,8 @@ export const headerStyles = StyleSheet.create({
     marginBottom: 30,
   },
   logo: {
-    width: 168,
-    height: 57,
+    width: 120,
+    height: 100,
     marginRight: 20,
   },
   headerTextContainer: {
