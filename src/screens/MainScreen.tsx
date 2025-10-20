@@ -59,45 +59,67 @@ export const MainScreen: React.FC = () => {
   }, []);
 
   const fetchVolunteersForDate = useCallback(async (date: Date) => {
-    try {
-      setLoading(true);
-      const today = new Date(date);
-      today.setHours(0, 0, 0, 0);
+  try {
+    setLoading(true);
+    const today = new Date(date);
+    today.setHours(0, 0, 0, 0);
 
-      const tasksSnapshot = await getDocs(collection(db, "tasks"));
-      const volunteersNames = new Set<string>();
+    const tasksSnapshot = await getDocs(collection(db, "tasks"));
+    const volunteersNames = new Set<string>();
 
-      tasksSnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        if (data.deadline?.toDate) {
-          const taskDate = data.deadline.toDate();
-          const sameDay =
-            taskDate.getFullYear() === today.getFullYear() &&
-            taskDate.getMonth() === today.getMonth() &&
-            taskDate.getDate() === today.getDate();
+    for (const docSnap of tasksSnapshot.docs) {
+      const data = docSnap.data();
+      if (data.deadline?.toDate) {
+        const taskDate = data.deadline.toDate();
+        const sameDay =
+          taskDate.getFullYear() === today.getFullYear() &&
+          taskDate.getMonth() === today.getMonth() &&
+          taskDate.getDate() === today.getDate();
 
-          if (sameDay) {
-            (data.volunteers || []).forEach((name: string) =>
-              volunteersNames.add(name.trim())
-            );
+        if (sameDay) {
+          const taskVolunteers: string[] = data.volunteers || [];
+
+          for (const v of taskVolunteers) {
+            const trimmed = v.trim();
+
+            // Si contiene un espacio, lo tomamos tal cual (es un nombre)
+            if (trimmed.includes(" ")) {
+              volunteersNames.add(trimmed);
+            } else {
+              // Si NO tiene espacios, lo tratamos como un ID de la colección "volunteers"
+              try {
+                const volunteerDoc = await getDoc(doc(db, "volunteers", trimmed));
+                if (volunteerDoc.exists()) {
+                  const volunteerData = volunteerDoc.data();
+                  const name = volunteerData?.fullName || trimmed;
+                  volunteersNames.add(name);
+                } else {
+                  volunteersNames.add(trimmed); // En caso de no existir el doc
+                }
+              } catch (error) {
+                console.warn("Error al buscar voluntario:", trimmed, error);
+                volunteersNames.add(trimmed);
+              }
+            }
           }
         }
-      });
-
-      const loadedVolunteers: Volunteer[] = Array.from(volunteersNames).map((name, index) => ({
-        id: (index + 1).toString(),
-        fullName: name,
-        attended: true,
-      }));
-
-      setVolunteers(loadedVolunteers);
-    } catch (e) {
-      console.error("Error recargando voluntarios:", e);
-      Alert.alert('Error', 'No se pudieron cargar los voluntarios.');
-    } finally {
-      setLoading(false);
+      }
     }
-  }, []);
+
+    const loadedVolunteers: Volunteer[] = Array.from(volunteersNames).map((name, index) => ({
+      id: (index + 1).toString(),
+      fullName: name,
+      attended: true,
+    }));
+
+    setVolunteers(loadedVolunteers);
+  } catch (e) {
+    console.error("Error recargando voluntarios:", e);
+    Alert.alert('Error', 'No se pudieron cargar los voluntarios.');
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     fetchVolunteersForDate(selectedDate);
