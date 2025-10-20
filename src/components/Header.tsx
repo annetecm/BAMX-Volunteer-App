@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
         
         {showCalendar && (
           <View style={headerStyles.calendarWidget}>
-            <Text style={headerStyles.calendarDate}>📅 Mar 25</Text>
+            <Text style={headerStyles.calendarDate}>📅</Text>
           </View>
         )}
       </View>
