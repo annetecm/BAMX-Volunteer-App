@@ -11,7 +11,7 @@ interface HeaderProps {
   showCalendar?: boolean;
   showAddButton?: boolean;
   onAddPress?: () => void;
-  progressLabel?: string; // Nueva prop para personalizar la etiqueta
+  progressLabel?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
@@ -23,9 +23,8 @@ export const Header: React.FC<HeaderProps> = ({
   showCalendar = false,
   showAddButton = false,
   onAddPress,
-  progressLabel // Por defecto será "Tareas\nCompletadas"
+  progressLabel
 }) => {
-  // Determinar la etiqueta basada en el título o la prop personalizada
   const getProgressLabel = () => {
     if (progressLabel) return progressLabel;
     if (title.toLowerCase().includes('asistencia')) {

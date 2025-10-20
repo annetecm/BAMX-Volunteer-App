@@ -158,7 +158,7 @@ const RegisterAdmin: React.FC = () => {
           </View>
 
           <View style={styles.disclaimerContainer}>
-            <Text style={styles.disclaimerText}>Aquí va el disclaimer</Text>
+            <Text style={styles.disclaimerText}>Al registrarse como voluntario accede a que hagamos uso de sus datos y documentos personales.</Text>
             <TouchableOpacity
               style={styles.checkboxContainer}
               onPress={() => setAcceptedTerms(!acceptedTerms)}
