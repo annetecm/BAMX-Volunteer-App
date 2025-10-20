@@ -14,6 +14,7 @@ type RootStackParamList = {
   Settings: undefined;
   AdminTasks: undefined; // ✅ Agregada
   VolunteerAdmin: undefined; // ✅ Agregada
+  VolunteerManager: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
@@ -158,6 +159,8 @@ export const SettingsScreen: React.FC = () => {
         }}
         onNavigateToAddTask={() => navigation.navigate('AddTask')}
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')} // ✅ Buzón a AdminTasks
+        onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
+        onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
       />
     </SafeAreaView>
   );

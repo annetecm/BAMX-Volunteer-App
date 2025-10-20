@@ -29,6 +29,7 @@ type RootStackParamList = {
   Settings: undefined;
   AdminTasks: undefined;
   VolunteerAdmin: undefined;
+  VolunteerManager: undefined;
   TaskDetails: { task: any };
 };
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdminTasks'>;
@@ -164,6 +165,8 @@ export const AdminTasksScreen: React.FC = () => {
         onTabPress={handleTabPress}
         onNavigateToAddTask={() => navigation.navigate('AddTask')}
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
+        onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
+        onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
       />
       <StatusBar style="auto" />
     </SafeAreaView>
