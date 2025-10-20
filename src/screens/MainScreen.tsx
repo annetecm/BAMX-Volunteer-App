@@ -32,7 +32,6 @@ export const MainScreen: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // --- Cargar usuario y rol ---
   useEffect(() => {
     const fetchUserAndRole = async () => {
       const user = auth.currentUser;
@@ -59,7 +58,6 @@ export const MainScreen: React.FC = () => {
     fetchUserAndRole();
   }, []);
 
-  // --- Cargar voluntarios para la fecha seleccionada ---
   const fetchVolunteersForDate = useCallback(async (date: Date) => {
     try {
       setLoading(true);
@@ -166,7 +164,6 @@ export const MainScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* BottomNavigation ahora maneja internamente el rol */}
       <BottomNavigation
         activeTab={activeTab}
         onTabPress={handleTabPress}
@@ -174,6 +171,7 @@ export const MainScreen: React.FC = () => {
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
         onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
         onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
+        onNavigateToMain={() => navigation.navigate('Main')}
       />
     </SafeAreaView>
   );

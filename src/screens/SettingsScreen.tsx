@@ -161,6 +161,7 @@ export const SettingsScreen: React.FC = () => {
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')} // ✅ Buzón a AdminTasks
         onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
         onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
+        onNavigateToMain={() => navigation.navigate('Main')}
       />
     </SafeAreaView>
   );

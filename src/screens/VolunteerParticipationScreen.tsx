@@ -123,6 +123,7 @@ export const VolunteerParticipationScreen: React.FC = () => {
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
         onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
         onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
+        onNavigateToMain={() => navigation.navigate('Main')}
       />
     </SafeAreaView>
   );

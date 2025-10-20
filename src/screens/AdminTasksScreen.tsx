@@ -167,6 +167,7 @@ export const AdminTasksScreen: React.FC = () => {
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
         onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
         onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
+        onNavigateToMain={() => navigation.navigate('Main')}
       />
       <StatusBar style="auto" />
     </SafeAreaView>

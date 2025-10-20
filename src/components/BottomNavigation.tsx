@@ -11,6 +11,7 @@ interface BottomNavProps {
   onNavigateToAdminTasks?: () => void;
   onNavigateToVolunteerAdmin?: () => void;
   onNavigateToVolunteerManager?: () => void;
+  onNavigateToMain?: () => void;
 }
 
 export const BottomNavigation: React.FC<BottomNavProps> = ({ 
@@ -19,10 +20,11 @@ export const BottomNavigation: React.FC<BottomNavProps> = ({
   onNavigateToAddTask,
   onNavigateToAdminTasks,
   onNavigateToVolunteerAdmin,
-  onNavigateToVolunteerManager
+  onNavigateToVolunteerManager,
+  onNavigateToMain
 }) => {
 
-  const [userRole, setUserRole] = useState<'admin' | 'volunteer'>('volunteer');
+  const [userRole, setUserRole] = useState<'admin' | 'volunteer' | 'supervisor'>('volunteer');
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -48,6 +50,7 @@ export const BottomNavigation: React.FC<BottomNavProps> = ({
       key: 'menu',
       icon: require('../../assets/menu.png'),
       activeIcon: require('../../assets/active.png'),
+      action: 'menu',
     },
     {
       key: 'tasks',
@@ -58,7 +61,9 @@ export const BottomNavigation: React.FC<BottomNavProps> = ({
     {
       key: 'home',
       icon: require('../../assets/apple.png'),
+      activeIcon: require('../../assets/apple.png'),
       isCenter: true,
+      action: 'home',
     },
     {
       key: 'mailbox',
@@ -74,19 +79,23 @@ export const BottomNavigation: React.FC<BottomNavProps> = ({
   ];
 
   const handlePress = (item: any) => {
-    if (item.isCenter) {
-      // Botón central decide según rol
-      if (userRole === 'admin' && onNavigateToVolunteerAdmin) {
-        onNavigateToVolunteerAdmin();
-      } else if (userRole === 'volunteer' && onNavigateToVolunteerManager) {
-        onNavigateToVolunteerManager();
-      }
-    } else if (item.action === 'addTask' && onNavigateToAddTask) {
-      onNavigateToAddTask();
-    } else if (item.action === 'adminTasks' && onNavigateToAdminTasks) {
-      onNavigateToAdminTasks();
-    } else {
-      onTabPress(item.key);
+    switch (item.action) {
+      case 'menu':
+        if (userRole === 'admin') onNavigateToVolunteerAdmin && onNavigateToVolunteerAdmin();
+        else onNavigateToVolunteerManager && onNavigateToVolunteerManager();
+        break;
+      case 'addTask':
+        onNavigateToAddTask && onNavigateToAddTask();
+        break;
+      case 'adminTasks':
+        onNavigateToAdminTasks && onNavigateToAdminTasks();
+        break;
+      case 'home':
+        onNavigateToMain && onNavigateToMain();
+        break;
+      default:
+        onTabPress(item.key);
+        break;
     }
   };
 
@@ -105,7 +114,7 @@ export const BottomNavigation: React.FC<BottomNavProps> = ({
             >
               <View style={bottomNavStyles.centerIcon}>
                 <Image 
-                  source={item.icon}
+                  source={iconSource}
                   style={bottomNavStyles.centerIconImage}
                   resizeMode="contain"
                 />

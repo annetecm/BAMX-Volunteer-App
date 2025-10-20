@@ -250,13 +250,14 @@ export const AddTaskScreen: React.FC = () => {
         activeTab={activeTab}
         onTabPress={(tab) => {
           if (tab === 'settings') navigation.navigate('Settings');
-          else if (tab === 'menu') navigation.navigate('Main');
+          else if (tab === 'home') navigation.navigate('Main');
           setActiveTab(tab);
         }}
         onNavigateToAddTask={() => console.log('Ya estás en AddTask')}
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')} 
         onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
         onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
+        onNavigateToMain={() => navigation.navigate('Main')}
       />
     </SafeAreaView>
   );
