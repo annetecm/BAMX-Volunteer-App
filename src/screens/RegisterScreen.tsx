@@ -210,7 +210,7 @@ const RegisterScreen: React.FC = () => {
 
   // Genera una contraseña segura y aleatoria para crear el usuario en Firebase
   const generateRandomPassword = (): string => {
-    // 16+ chars mixing random + timestamp to ensure uniqueness
+  
     const rand = Math.random().toString(36).slice(2, 10);
     const time = Date.now().toString(36).slice(-6);
     return `${rand}${time}A!`;
