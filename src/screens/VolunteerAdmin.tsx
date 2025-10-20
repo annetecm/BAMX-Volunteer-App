@@ -28,6 +28,7 @@ type RootStackParamList = {
   Settings: undefined;
   AdminTasks: undefined;
   VolunteerAdmin: undefined;
+  VolunteerManager: undefined;
   RegisterScreen: undefined;
   VolunteerDetails: { volunteer: any };
 };
@@ -161,6 +162,8 @@ export const VolunteerAdmin: React.FC = () => {
         onTabPress={handleTabPress}
         onNavigateToAddTask={() => navigation.navigate('AddTask')}
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
+        onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
+        onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
       />
     </SafeAreaView>
   );

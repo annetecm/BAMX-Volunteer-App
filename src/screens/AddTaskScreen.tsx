@@ -255,6 +255,8 @@ export const AddTaskScreen: React.FC = () => {
         }}
         onNavigateToAddTask={() => console.log('Ya estás en AddTask')}
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')} 
+        onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
+        onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
       />
     </SafeAreaView>
   );

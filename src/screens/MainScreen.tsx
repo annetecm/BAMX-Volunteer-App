@@ -16,6 +16,7 @@ type RootStackParamList = {
   Settings: undefined;
   AdminTasks: undefined;
   VolunteerAdmin: undefined;
+  VolunteerManager: undefined;
   VolunteerParticipation: { volunteerName: string };
 };
 
@@ -27,43 +28,41 @@ export const MainScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [userName, setUserName] = useState<string>('Voluntario');
-  const [loadingUser, setLoadingUser] = useState<boolean>(true);
-  const [loadingVolunteers, setLoadingVolunteers] = useState<boolean>(true);
+  const [userRole, setUserRole] = useState<string>('volunteer'); 
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
+  // --- Cargar usuario y rol ---
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) { setLoadingUser(false); return; }
+    const fetchUserAndRole = async () => {
+      const user = auth.currentUser;
+      if (!user) { setLoading(false); return; }
 
-    (async () => {
       try {
         const snap = await getDoc(doc(db, 'users', user.uid));
         if (snap.exists()) {
-          const data = snap.data() as { fullName?: string; phone_number?: string | null; email?: string | null; };
-          const name =
-            (data.fullName && data.fullName.trim()) ||
-            (data.phone_number && data.phone_number.trim()) ||
-            (data.email && data.email.split('@')[0]) ||
-            'Voluntario';
-          setUserName(name);
+          const data = snap.data() as { fullName?: string; role?: string; phone_number?: string | null; email?: string | null };
+          setUserName(data.fullName || user.displayName || 'Voluntario');
+          setUserRole(data.role || 'volunteer');
         } else {
-          const fallback =
-            (user.displayName && user.displayName.trim()) ||
-            (user.phoneNumber && user.phoneNumber.trim()) ||
-            (user.email ? user.email.split('@')[0] : 'Voluntario');
-          setUserName(fallback);
+          setUserName(user.displayName || 'Voluntario');
+          setUserRole('volunteer');
         }
       } catch (e: any) {
         Alert.alert('Error al cargar usuario', e?.message ?? 'Intenta nuevamente.');
+        setUserRole('volunteer');
       } finally {
-        setLoadingUser(false);
+        setLoading(false);
       }
-    })();
+    };
+
+    fetchUserAndRole();
   }, []);
 
+  // --- Cargar voluntarios para la fecha seleccionada ---
   const fetchVolunteersForDate = useCallback(async (date: Date) => {
     try {
-      setLoadingVolunteers(true);
+      setLoading(true);
       const today = new Date(date);
       today.setHours(0, 0, 0, 0);
 
@@ -98,7 +97,7 @@ export const MainScreen: React.FC = () => {
       console.error("Error recargando voluntarios:", e);
       Alert.alert('Error', 'No se pudieron cargar los voluntarios.');
     } finally {
-      setLoadingVolunteers(false);
+      setLoading(false);
     }
   }, []);
 
@@ -106,21 +105,25 @@ export const MainScreen: React.FC = () => {
     fetchVolunteersForDate(selectedDate);
   }, [selectedDate, fetchVolunteersForDate]);
 
-  const handleDaySelect = (date: Date) => {
-    setSelectedDate(date);
-  };
+  const handleDaySelect = (date: Date) => setSelectedDate(date);
 
   const attendedVolunteers = volunteers.filter(v => v.attended).length;
-  const attendancePercentage = Math.round((attendedVolunteers / volunteers.length) * 100);
+  const attendancePercentage = volunteers.length > 0 ? Math.round((attendedVolunteers / volunteers.length) * 100) : 0;
   const filteredVolunteers = volunteers.filter(v =>
     activeFilter === 'asistieron' ? v.attended : !v.attended
   );
 
-  if (loadingUser || loadingVolunteers) {
+  const handleTabPress = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === 'settings') navigation.navigate('Settings');
+    else if (tab === 'menu') navigation.navigate('Main');
+  };
+
+  if (loading) {
     return (
       <SafeAreaView style={screenStyles.container}>
         <View style={[screenStyles.content, { justifyContent: 'center', alignItems: 'center' }]}>
-          <ActivityIndicator />
+          <ActivityIndicator size="large" color="#FF7A00" />
         </View>
       </SafeAreaView>
     );
@@ -163,14 +166,14 @@ export const MainScreen: React.FC = () => {
         </View>
       </ScrollView>
 
+      {/* BottomNavigation ahora maneja internamente el rol */}
       <BottomNavigation
         activeTab={activeTab}
-        onTabPress={(tab) => {
-          if (tab === 'settings') navigation.navigate('Settings');
-          setActiveTab(tab);
-        }}
+        onTabPress={handleTabPress}
         onNavigateToAddTask={() => navigation.navigate('AddTask')}
         onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
+        onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
+        onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
       />
     </SafeAreaView>
   );

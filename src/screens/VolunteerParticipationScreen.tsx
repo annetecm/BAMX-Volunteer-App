@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, SafeAreaView, ActivityIndicator, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -14,6 +14,7 @@ type RootStackParamList = {
   Settings: undefined;
   AdminTasks: undefined;
   VolunteerAdmin: undefined;
+  VolunteerManager: undefined;
   VolunteerParticipation: { volunteerName: string };
 };
 
@@ -34,21 +35,21 @@ export const VolunteerParticipationScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('mailbox');
 
+  // --- Cargar participaciones ---
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
         const q = query(collection(db, 'attendance'), where('name', '==', volunteerName));
         const snapshot = await getDocs(q);
-
         const data: Attendance[] = snapshot.docs.map(doc => ({
           id: doc.id,
           name: doc.data().name || '',
           date: doc.data().date || '',
         }));
-
         setRecords(data);
       } catch (error) {
         console.error('Error fetching attendance:', error);
+        Alert.alert('Error', 'No se pudieron cargar las participaciones');
       } finally {
         setLoading(false);
       }
@@ -63,9 +64,22 @@ export const VolunteerParticipationScreen: React.FC = () => {
     else if (tab === 'menu') navigation.navigate('Main');
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={screenStyles.adminContainer}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#FF7A00" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={screenStyles.adminContainer}>
-      <Header userName="AdministradorTEMPORAL" title={`Participaciones de ${volunteerName}`} />
+      <Header
+        userName={volunteerName} // Mostrar nombre del voluntario en lugar de usuario actual
+        title={`Participaciones de ${volunteerName}`}
+      />
 
       <View style={screenStyles.adminContent}>
         <ScrollView
@@ -73,9 +87,7 @@ export const VolunteerParticipationScreen: React.FC = () => {
           contentContainerStyle={screenStyles.adminScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {loading ? (
-            <ActivityIndicator size="large" color="#FF7A00" style={{ marginTop: 30 }} />
-          ) : records.length === 0 ? (
+          {records.length === 0 ? (
             <Text style={{ textAlign: 'center', marginTop: 30 }}>
               No se encontraron participaciones.
             </Text>
@@ -103,17 +115,15 @@ export const VolunteerParticipationScreen: React.FC = () => {
         </ScrollView>
       </View>
 
+      {/* Ya no enviamos role: BottomNavigation lo obtiene desde Firebase */}
       <BottomNavigation
-              activeTab={activeTab}
-              onTabPress={(tab) => {
-                if (tab === 'settings') {
-                  navigation.navigate('Settings');
-                }
-                setActiveTab(tab);
-              }}
-              onNavigateToAddTask={() => navigation.navigate('AddTask')}
-              onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')} // ✅ Buzón a AdminTasks
-            />
+        activeTab={activeTab}
+        onTabPress={handleTabPress}
+        onNavigateToAddTask={() => navigation.navigate('AddTask')}
+        onNavigateToAdminTasks={() => navigation.navigate('AdminTasks')}
+        onNavigateToVolunteerAdmin={() => navigation.navigate('VolunteerAdmin')}
+        onNavigateToVolunteerManager={() => navigation.navigate('VolunteerManager')}
+      />
     </SafeAreaView>
   );
 };
