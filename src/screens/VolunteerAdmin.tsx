@@ -1,26 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, SafeAreaView, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Header } from '../components/Header';
-import { VolunteerItem, Volunteer } from '../components/Task';
-import { BottomNavigation } from '../components/BottomNavigation';
-import { screenStyles } from '../styles/ScreenStyles';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { auth } from '../firebaseConfig';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Header } from "../components/Header";
+import { VolunteerItem, Volunteer } from "../components/Task";
+import { BottomNavigation } from "../components/BottomNavigation";
+import { screenStyles } from "../styles/ScreenStyles";
+import { db, auth } from "../firebaseConfig";
+import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
 
-const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_APP_ID,
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 type RootStackParamList = {
   Main: undefined;
@@ -86,7 +82,8 @@ export const VolunteerAdmin: React.FC = () => {
           blood_type: data.blood_type,
           area: data.area,
           curp: data.curp,
-          ine: data.ine
+          ine: data.ine,
+          medical_certificate: data.medical_certificate,
         };
       });
       setVolunteers(dataArray);
