@@ -1,6 +1,6 @@
 import { auth, db } from "../firebaseConfig";
 import React, { useState } from "react";
-import { createUserWithEmailAndPassword, deleteUser } from "firebase/auth";
+import { createUserWithEmailAndPassword, deleteUser, signInWithEmailAndPassword } from "firebase/auth";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as DocumentPicker from 'expo-document-picker';
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -217,31 +217,25 @@ const RegisterScreen: React.FC = () => {
   };
 
   const handleRegister = async () => {
-    try {
-      if (!formData.email) {
-        Alert.alert("Error", "Por favor ingresa correo");
-        return;
-      }
-
-      // Generamos una contraseña oculta para el usuario (el usuario no la ve ni la ingresa)
-      const generatedPassword = generateRandomPassword();
-
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, formData.email, generatedPassword
-      );
-
-      try {
-        await saveUserData(userCredential.user.uid);
-      } catch (firestoreErr: any) {
-        try { await deleteUser(userCredential.user); } catch (_) { /* no-op */ }
-        throw new Error("No se pudieron guardar tus datos. Intenta de nuevo.");
-      }
-
-    } catch (error: any) {
-      console.error("Error en registro:", error.message);
-      Alert.alert("Error", error.message);
+  try {
+    if (!formData.email || !formData.fullName) {
+      Alert.alert("Error", "Por favor completa todos los campos obligatorios");
+      return;
     }
-  };
+
+    // Generate a fake UID to use as Firestore document ID
+    const fakeUID = `vol_${Date.now()}`;
+
+    await saveUserData(fakeUID);
+
+    Alert.alert("Listo", "Voluntario registrado correctamente en la base de datos.");
+  } catch (error: any) {
+    console.error("Error en registro:", error.message);
+    Alert.alert("Error", "No se pudo registrar el voluntario. Intenta nuevamente.");
+  }
+};
+
+
 
   const renderAreaItem = ({ item }: { item: AreaOption }) => (
     <TouchableOpacity
